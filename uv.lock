@@ -117,7 +117,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "~=0.115.6" },
-    { name = "python-dotenv", specifier = ">=1.0.1,<1.2.0" },
+    { name = "python-dotenv", specifier = "~=1.0.1" },
     { name = "uvicorn", specifier = "~=0.32.1" },
 ]
 
@@ -339,6 +339,7 @@ version = "0.1.0"
 source = { virtual = "src/frontend" }
 dependencies = [
     { name = "azure-identity" },
+    { name = "python-dotenv" },
     { name = "requests" },
     { name = "streamlit" },
 ]
@@ -346,6 +347,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "azure-identity", specifier = "~=1.19.0" },
+    { name = "python-dotenv", specifier = "~=1.0.1" },
     { name = "requests", specifier = "~=2.32.3" },
     { name = "streamlit", specifier = "~=1.41.1" },
 ]
@@ -397,7 +399,7 @@ dependencies = [
 requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5,<7.0.0" },
     { name = "ipywidgets", specifier = ">=8.1.5,<9.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.1,<1.2.0" },
+    { name = "python-dotenv", specifier = "~=1.0.1" },
 ]
 
 [[package]]

@@ -1,83 +1,52 @@
-# From https://techcommunity.microsoft.com/t5/fasttrack-for-azure/create-an-azure-openai-langchain-chromadb-and-chainlit-chat-app/ba-p/3885602
+###############
+# Build stage #
+###############
 
-# # Stage 1 - Install build dependencies
-
-# A Dockerfile must start with a FROM instruction that sets the base image for the container.
-# The Python images come in many flavors, each designed for a specific use case.
-# The python:3.11-slim image is a good base image for most applications.
-# It is a minimal image built on top of Debian Linux and includes only the necessary packages to run Python.
-# The slim image is a good choice because it is small and contains only the packages needed to run Python.
-# For more information, see:
-# * https://hub.docker.com/_/python
-# * https://docs.streamlit.io/knowledge-base/tutorials/deploy/docker
-FROM python:3.12-slim-bookworm AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-# The WORKDIR instruction sets the working directory for any RUN, CMD, ENTRYPOINT, COPY and ADD instructions that follow it in the Dockerfile.
-# If the WORKDIR doesn’t exist, it will be created even if it’s not used in any subsequent Dockerfile instruction.
-# For more information, see: https://docs.docker.com/engine/reference/builder/#workdir
-WORKDIR /app
-
-# Set environment variables.
-# The ENV instruction sets the environment variable <key> to the value <value>.
-# This value will be in the environment of all “descendant” Dockerfile commands and can be replaced inline in many as well.
-# For more information, see: https://docs.docker.com/engine/reference/builder/#env
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install git so that we can clone the app code from a remote repo using the RUN instruction.
-# The RUN comand has 2 forms:
-# * RUN <command> (shell form, the command is run in a shell, which by default is /bin/sh -c on Linux or cmd /S /C on Windows)
-# * RUN ["executable", "param1", "param2"] (exec form)
-# The RUN instruction will execute any commands in a new layer on top of the current image and commit the results.
-# The resulting committed image will be used for the next step in the Dockerfile.
-# For more information, see: https://docs.docker.com/engine/reference/builder/#run
-# RUN apt-get update && apt-get install -y \
-#   build-essential \
-#   curl \
-#   software-properties-common \
-#   git \
-#   sudo \
-#   && rm -rf /var/lib/apt/lists/*
-
-# Create a virtualenv to keep dependencies together
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Clone the requirements.txt which contains dependencies to WORKDIR
-# COPY has two forms:
-# * COPY <src> <dest> (this copies the files from the local machine to the container's own filesystem)
-# * COPY ["<src>",... "<dest>"] (this form is required for paths containing whitespace)
-# For more information, see: https://docs.docker.com/engine/reference/builder/#copy
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Stage 2 - Copy only necessary files to the runner stage
-
-# The FROM instruction initializes a new build stage for the application
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# Copy the virtual environment from the builder stage
-COPY --from=builder /opt/venv /opt/venv
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PYTHON=python3.12 \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
-# Set environment variables
-ENV PATH="/opt/venv/bin:$PATH"
+COPY pyproject.toml /app/
+COPY uv.lock /app/
+COPY src/frontend /app/src/frontend/
 
-# Copy the necessary files to the runner stage
-COPY app.py app.py
+RUN --mount=type=cache,target=/root/.cache <<EOT
+uv sync \
+    --frozen \
+    --no-dev \
+    --no-install-workspace \
+    --no-editable \
+    --project src/frontend
+EOT
 
-RUN groupadd -g 1001 app && \
-    useradd -u 1001 -g app -m app
-RUN chown -R app:app /app
-USER app
+###############
+# Final image #
+###############
 
-# For more information, see: https://docs.docker.com/engine/reference/builder/#expose
+FROM python:3.12-slim
+
+SHELL ["sh", "-exc"]
+
+# Optional: add the application virtualenv to search path.
+ENV PATH=/app/.venv/bin:$PATH
+
+RUN <<EOT
+groupadd -r app
+useradd -r -d /app -g app -N app
+EOT
+
 EXPOSE 8000
+STOPSIGNAL SIGINT
 
-# For more information, see: https://docs.docker.com/engine/reference/builder/#entrypoint
-ENTRYPOINT ["streamlit", "run", "/app/app.py", "--server.port=8000", "--server.address=0.0.0.0"]
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/src/frontend /app/src/frontend
+
+WORKDIR /app/src/frontend
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8000", "--server.address=0.0.0.0"]

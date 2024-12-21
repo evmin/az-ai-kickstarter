@@ -35,4 +35,4 @@ load_dotenv_from_azd()
 
 st.write("Hello world")
 st.write("Calling backend API...")
-st.write(call_backend(os.getenv('BACKEND_ENDPOINT'), os.getenv('AZURE_CLIENT_APP_ID'), {"hello": "world"}).json())
+st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), os.getenv('AZURE_CLIENT_APP_ID'), {"hello": "world"}).json())

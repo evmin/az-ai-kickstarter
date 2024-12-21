@@ -18,12 +18,12 @@ COPY uv.lock /app/
 COPY src/backend /app/src/backend/
 
 RUN --mount=type=cache,target=/root/.cache <<EOT
-cd /app/src/backend
 uv sync \
     --frozen \
     --no-dev \
     --no-install-workspace \
-    --no-editable
+    --no-editable \
+    --project src/backend
 EOT
 
 ###############
@@ -45,9 +45,8 @@ EOT
 EXPOSE 8000
 STOPSIGNAL SIGINT
 
-COPY src/backend/docker-entrypoint.sh /
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src/backend /app/src/backend
 
 WORKDIR /app/src/backend
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
