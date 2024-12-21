@@ -64,6 +64,21 @@ architecture-beta
     frontend:R --> L:backend
 ```
 
+```mermaid
+    C4Container
+    title <%- solutionName %> architecture diagram
+
+    Person(user, User, "User of the solution")
+
+    Container_Boundary(c1, "<%- solutionName %>") {
+        Container(frontend, "Frontend", "Python, Streamlit", "UX for the solution")
+        Container_Ext(backend, "Backend", "Python, Fastapi", "Backend implementation of the solution")
+    }
+    Rel(user, frontend, "Uses")
+    Rel(frontend, backend, "Calls")
+```
+
+
 ## Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
