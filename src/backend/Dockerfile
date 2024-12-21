@@ -1,6 +1,7 @@
 ###############
 # Build stage #
 ###############
+
 FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -12,10 +13,9 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON=python3.12 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 
-# We won't ship those
 COPY pyproject.toml /app/
 COPY uv.lock /app/
-COPY src/backend/ /app/src/backend/
+COPY src/backend /app/src/backend/
 
 RUN --mount=type=cache,target=/root/.cache <<EOT
 cd /app/src/backend
@@ -26,6 +26,11 @@ uv sync \
     --no-editable
 EOT
 
+###############
+# Final image #
+###############
+
+FROM python:3.12-slim
 
 SHELL ["sh", "-exc"]
 
@@ -37,13 +42,12 @@ groupadd -r app
 useradd -r -d /app -g app -N app
 EOT
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
+EXPOSE 8000
 STOPSIGNAL SIGINT
 
 COPY src/backend/docker-entrypoint.sh /
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/src/backend /app/src/backend
 
-# Copy the environment, but not the source code
-
-# Expose the port
-EXPOSE 8000
+WORKDIR /app/src/backend
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
