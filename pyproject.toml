@@ -5,7 +5,36 @@ description = "AI Application chassis - best AI app practices optimized for Azur
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "python-dotenv >=1.0.1,<1.2.0",
     "ipykernel >=6.29.5,<7.0.0",
     "ipywidgets >=8.1.5,<9.0.0",
+    "python-dotenv >=1.0.1,<1.2.0",
 ]
+
+[tool.uv.workspace]
+members = ["src/backend", "src/frontend"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src"]
+
+[tool.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quartapp"]
+
+[tool.black]
+target-version =  ["py311"]
+line-length = 120
+
+[tool.pytest.ini_options]
+addopts = "-ra --cov"
+pythonpath = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+
+
+
+

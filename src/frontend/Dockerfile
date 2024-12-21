@@ -11,6 +11,7 @@
 # * https://hub.docker.com/_/python
 # * https://docs.streamlit.io/knowledge-base/tutorials/deploy/docker
 FROM python:3.12-slim-bookworm AS builder
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # The WORKDIR instruction sets the working directory for any RUN, CMD, ENTRYPOINT, COPY and ADD instructions that follow it in the Dockerfile.
 # If the WORKDIR doesn’t exist, it will be created even if it’s not used in any subsequent Dockerfile instruction.
@@ -57,8 +58,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # The FROM instruction initializes a new build stage for the application
 FROM python:3.12-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Sets the working directory to /app
 WORKDIR /app
 
 # Copy the virtual environment from the builder stage
@@ -75,13 +76,8 @@ RUN groupadd -g 1001 app && \
 RUN chown -R app:app /app
 USER app
 
-# The EXPOSE instruction informs Docker that the container listens on the specified network ports at runtime.
 # For more information, see: https://docs.docker.com/engine/reference/builder/#expose
 EXPOSE 8000
 
-# The ENTRYPOINT instruction has two forms:
-# * ENTRYPOINT ["executable", "param1", "param2"] (exec form, preferred)
-# * ENTRYPOINT command param1 param2 (shell form)
-# The ENTRYPOINT instruction allows you to configure a container that will run as an executable.
 # For more information, see: https://docs.docker.com/engine/reference/builder/#entrypoint
 ENTRYPOINT ["streamlit", "run", "/app/app.py", "--server.port=8000", "--server.address=0.0.0.0"]

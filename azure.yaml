@@ -6,12 +6,14 @@ services:
     host: containerapp
     docker:
       path: ./Dockerfile
+      context: ../..
   frontend:
     language: python
     project: src/frontend
     host: containerapp
     docker:
       path: ./Dockerfile
+      context: ../..
 hooks:
   preprovision:
   #  windows:
