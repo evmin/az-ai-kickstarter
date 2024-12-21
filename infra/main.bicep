@@ -1,6 +1,6 @@
 metadata name = 'hello-ai-world'
 metadata description = 'Deploys the infrastructure for Hello AI World'
-metadata author = 'AI GBB EMEA &lt;dominique.broeglin@microsoft.com&gt;'
+metadata author = 'AI GBB EMEA <dominique.broeglin@microsoft.com>'
 
 /* -------------------------------------------------------------------------- */
 /*                                 PARAMETERS                                 */
