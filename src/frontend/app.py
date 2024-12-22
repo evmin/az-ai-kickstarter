@@ -15,7 +15,7 @@ def load_dotenv_from_azd():
         logging.info(f"Found AZD environment. Loading...")
         load_dotenv(stream=StringIO(result.stdout))
     else:
-        logging.info(f"AZD environment not found. Loading from .env file...")
+        logging.info(f"AZD environment not found. Trying to load from .env file...")
         load_dotenv()
 
 def call_backend(backend_endpoint, app_id, payload):
@@ -33,8 +33,17 @@ def call_backend(backend_endpoint, app_id, payload):
     response.raise_for_status()
     return response
 
+def get_principal_name():
+    result = st.context.headers.get('x-ms-client-principal-name')
+    if result:
+        return result
+    else:
+        return "Anonymous"
+
 load_dotenv_from_azd()
 
-st.write(hello())
+st.write(hello(get_principal_name()))
+st.markdown('<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True)
+
 st.write("Calling backend API...")
 st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), os.getenv('AZURE_CLIENT_APP_ID'), {"hello": "world"}).json())
