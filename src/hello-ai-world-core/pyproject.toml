@@ -1,0 +1,27 @@
+[project]
+name = "hello-ai-world-core"
+version = "0.1.0"
+description = "AI Application chassis - best AI app practices optimized for Azure - Core"
+readme = "README.md"
+authors = [
+    { name = "Dominique Broeglin", email = "dominique.broeglin@microsoft.com" },
+    { name = "Evgeny Minkevich", email = "evgeny.minkevich@microsoft.com" },
+]
+requires-python = ">=3.12"
+dependencies = [
+    "azure-ai-evaluation>=1.1.0",
+    "azure-ai-inference>=1.0.0b6",
+]
+
+[project.scripts]
+hello-ai-world-core = "hello_ai_world_core:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=6.0.0",
+    "pytest>=8.3.4",
+]

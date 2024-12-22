@@ -9,4 +9,5 @@ dependencies = [
     "requests ~=2.32.3",
     "azure-identity ~=1.19.0",
     "python-dotenv ~=1.0.1",
+    "hello-ai-world-core",
 ]

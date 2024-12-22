@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from io import StringIO
 from subprocess import run, PIPE
 
+from hello_ai_world_core import hello
+
 logging.basicConfig(level=logging.INFO)
 
 def load_dotenv_from_azd():
@@ -23,6 +25,7 @@ app = FastAPI()
 @app.get("/echo")
 async def http_trigger(request_body: dict = Body(...)):
     logging.info('API request received with body %s', request_body)
+    logging.info(hello())
 
     return JSONResponse(
         content=request_body,

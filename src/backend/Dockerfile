@@ -13,17 +13,32 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON=python3.12 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 
-COPY pyproject.toml /app/
-COPY uv.lock /app/
-COPY src/backend /app/src/backend/
+## install depdencies first as they change less often
 
-RUN --mount=type=cache,target=/root/.cache <<EOT
+COPY uv.lock pyproject.toml .python-version /app/
+COPY src/hello-ai-world-core/.python-version /app/src/hello-ai-world-core/
+COPY src/hello-ai-world-core/pyproject.toml /app/src/hello-ai-world-core/
+COPY src/backend/pyproject.toml /app/src/backend/
+COPY src/backend/.python-version /app/src/backend/
+RUN --mount=type=cache,target=/root/.cache/uv <<EOT
 uv sync \
     --frozen \
     --no-dev \
     --no-install-workspace \
     --no-editable \
-    --project src/backend
+    --all-packages
+EOT
+
+## install the backend last as it changes most often
+
+COPY src/hello-ai-world-core /app/src/hello-ai-world-core
+COPY src/backend /app/src/backend
+RUN --mount=type=cache,target=/root/.cache/uv <<EOT
+uv sync \
+    --frozen \
+    --no-dev \
+    --no-editable \
+    --project src/backend    
 EOT
 
 ###############
@@ -33,9 +48,6 @@ EOT
 FROM python:3.12-slim
 
 SHELL ["sh", "-exc"]
-
-# Optional: add the application virtualenv to search path.
-ENV PATH=/app/.venv/bin:$PATH
 
 RUN <<EOT
 groupadd -r app
@@ -49,4 +61,4 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src/backend /app/src/backend
 
 WORKDIR /app/src/backend
-ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/.venv/bin/uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

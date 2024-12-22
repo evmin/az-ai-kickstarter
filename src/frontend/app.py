@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from io import StringIO
 from subprocess import run, PIPE
 
+from hello_ai_world_core import hello
+
 def load_dotenv_from_azd():
     result = run("azd env get-values", stdout=PIPE, stderr=PIPE, shell=True, text=True)
     if result.returncode == 0:
@@ -33,6 +35,6 @@ def call_backend(backend_endpoint, app_id, payload):
 
 load_dotenv_from_azd()
 
-st.write("Hello world")
+st.write(hello())
 st.write("Calling backend API...")
 st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), os.getenv('AZURE_CLIENT_APP_ID'), {"hello": "world"}).json())
