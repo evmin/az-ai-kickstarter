@@ -1,11 +1,21 @@
+###############################################
+# Base stage (shared between build and final) #
+###############################################
+
+FROM python:3.12-slim AS base
+
+ENV APP_NAME=frontend
+ENV PACKAGE_NAME=hello-ai-world-core
+
 ###############
 # Build stage #
 ###############
 
-FROM python:3.12-slim AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+FROM base AS builder
 
-WORKDIR /app
+## Install and configure UV, see https://docs.astral.sh/uv/ for more information
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
@@ -13,14 +23,15 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON=python3.12 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 
+WORKDIR /app
 
-## install depdencies first as they change less often
+## Install depdencies first as they change less often
 
 COPY uv.lock pyproject.toml .python-version /app/
-COPY src/hello-ai-world-core/.python-version /app/src/hello-ai-world-core/
-COPY src/hello-ai-world-core/pyproject.toml /app/src/hello-ai-world-core/
-COPY src/frontend/pyproject.toml /app/src/frontend/
-COPY src/frontend/.python-version /app/src/frontend/
+COPY src/${PACKAGE_NAME}/.python-version /app/src/${PACKAGE_NAME}/
+COPY src/${PACKAGE_NAME}/pyproject.toml /app/src/${PACKAGE_NAME}/
+COPY src/${APP_NAME}/pyproject.toml /app/src/${APP_NAME}/
+COPY src/${APP_NAME}/.python-version /app/src/${APP_NAME}/
 RUN --mount=type=cache,target=/root/.cache/uv <<EOT
 uv sync \
     --frozen \
@@ -30,23 +41,23 @@ uv sync \
     --all-packages
 EOT
 
-## install the frontend last as it changes most often
+## Install the app last as it changes most often
 
-COPY src/hello-ai-world-core /app/src/hello-ai-world-core
-COPY src/frontend /app/src/frontend
+COPY src/${PACKAGE_NAME} /app/src/${PACKAGE_NAME}
+COPY src/${APP_NAME} /app/src/${APP_NAME}
 RUN --mount=type=cache,target=/root/.cache/uv <<EOT
 uv sync \
     --frozen \
     --no-dev \
     --no-editable \
-    --project src/frontend    
+    --project src/${APP_NAME}    
 EOT
 
 ###############
 # Final image #
 ###############
 
-FROM python:3.12-slim
+FROM base
 
 SHELL ["sh", "-exc"]
 
@@ -59,7 +70,7 @@ EXPOSE 8000
 STOPSIGNAL SIGINT
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --from=builder --chown=app:app /app/src/frontend /app/src/frontend
+COPY --from=builder --chown=app:app /app/src/${APP_NAME} /app/src/${APP_NAME}
 
-WORKDIR /app/src/frontend
+WORKDIR /app/src/${APP_NAME}
 ENTRYPOINT ["/app/.venv/bin/streamlit", "run", "app.py", "--server.port=8000", "--server.address=0.0.0.0"]
