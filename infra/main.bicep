@@ -173,6 +173,8 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
     tags: tags
     name: _keyVaultName
     enableRbacAuthorization: true
+    // Set to true to if you deploy in production and want to protect against accidental deletion
+    enablePurgeProtection: false 
     roleAssignments: [
       {
         roleDefinitionIdOrName: 'Key Vault Secrets User'
@@ -288,6 +290,20 @@ module backendApp 'modules/app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
     }
+  }
+}
+
+module aiHub 'br/public:avm/res/machine-learning-services/workspace:0.9.1' = {
+  name: 'aiHub'
+  scope: resourceGroup()
+  params: {
+    name: 'aiHub'
+    sku: 'Basic'
+    location: location
+    tags: tags
+    associatedApplicationInsightsResourceId: appInsights.id
+    associatedContainerRegistryResourceId: containerRegistry.outputs.resourceId
+    associatedKeyVaultResourceId: keyVault.outputs.resourceId
   }
 }
 
