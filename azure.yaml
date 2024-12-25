@@ -7,7 +7,8 @@ services:
     docker:
       path: ./Dockerfile
       context: ../..
-      remoteBuild: true
+      remoteBuild: true # set to false if you want to build Docker images locally on your machine
+      # see https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/azd-schema#docker-options-sample
   frontend:
     language: python
     project: src/frontend
@@ -15,7 +16,8 @@ services:
     docker:
       path: ./Dockerfile
       context: ../..
-      remoteBuild: true
+      remoteBuild: true # set to false if you want to build Docker images locally on your machine
+      # see https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/azd-schema#docker-options-sample
 hooks:
   preprovision:
   #  windows:
