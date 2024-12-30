@@ -8,6 +8,5 @@ dependencies = [
     "streamlit ~=1.41.1",
     "requests ~=2.32.3",
     "azure-identity ~=1.19.0",
-    "python-dotenv ~=1.0.1",
-    "hello-ai-world-core",
+    "python-dotenv ~=1.0.1"
 ]

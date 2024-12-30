@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from io import StringIO
 from subprocess import run, PIPE
 
-from hello_ai_world_core import hello
-
 def load_dotenv_from_azd():
     result = run("azd env get-values", stdout=PIPE, stderr=PIPE, shell=True, text=True)
     if result.returncode == 0:
@@ -42,7 +40,7 @@ def get_principal_name():
 
 load_dotenv_from_azd()
 
-st.write(hello(get_principal_name()))
+st.write(get_principal_name())
 st.markdown('<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True)
 
 st.write("Calling backend API...")

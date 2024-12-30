@@ -4,9 +4,6 @@
 
 FROM python:3.12-slim AS base
 
-ENV APP_NAME=backend
-ENV PACKAGE_NAME=hello-ai-world-core
-
 ###############
 # Build stage #
 ###############
@@ -19,19 +16,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
-    UV_PYTHON_DOWNLOADS=never \
-    UV_PYTHON=python3.12 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
+    # UV_PYTHON_DOWNLOADS=never \
+    # UV_PYTHON=python3.12 \
 
 WORKDIR /app
 
-## Install depdencies first as they change less often
-
-COPY uv.lock pyproject.toml .python-version /app/
-COPY src/${PACKAGE_NAME}/.python-version /app/src/${PACKAGE_NAME}/
-COPY src/${PACKAGE_NAME}/pyproject.toml /app/src/${PACKAGE_NAME}/
-COPY src/${APP_NAME}/pyproject.toml /app/src/${APP_NAME}/
-COPY src/${APP_NAME}/.python-version /app/src/${APP_NAME}/
+COPY uv.lock pyproject.toml /app/
 RUN uv sync \
     --frozen \
     --no-dev \
@@ -39,15 +30,7 @@ RUN uv sync \
     --no-editable \
     --all-packages
 
-## Install the app last as it changes most often
-
-COPY src/${PACKAGE_NAME} /app/src/${PACKAGE_NAME}
-COPY src/${APP_NAME} /app/src/${APP_NAME}
-RUN uv sync \
-    --frozen \
-    --no-dev \
-    --no-editable \
-    --project src/${APP_NAME}    
+COPY app.py /app/
 
 ###############
 # Final image #
@@ -63,8 +46,7 @@ RUN useradd -r -d /app -g app -N app
 EXPOSE 8000
 STOPSIGNAL SIGINT
 
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --from=builder --chown=app:app /app/src/${APP_NAME} /app/src/${APP_NAME}
+COPY --from=builder --chown=app:app /app /app
 
-WORKDIR /app/src/${APP_NAME}
+WORKDIR /app
 ENTRYPOINT ["/app/.venv/bin/uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
