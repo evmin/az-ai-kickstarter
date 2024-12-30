@@ -24,7 +24,8 @@ def call_backend(backend_endpoint, app_id, payload):
     headers = {}
 
     if not (url.startswith('http://localhost') or url.startswith('http://127.0.0.1')):
-        token = DefaultAzureCredential().get_token(f'api://{app_id}/.default')
+        # token = DefaultAzureCredential().get_token(f'api://{app_id}/.default')
+        token = DefaultAzureCredential().get_token("https://management.azure.com/.default")
         headers['Authorization'] = f"Bearer {token.token}"
 
     response = requests.get(url, json=payload, headers=headers)
