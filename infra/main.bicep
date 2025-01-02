@@ -85,7 +85,7 @@ var alphaNumericEnvironmentName = replace(replace(environmentName, '-', ''), ' '
 var tags = union(
   {
     'azd-env-name': environmentName
-    solution: 'moneta-agentic-gbb-ai-1.0'
+    solution: 'hello-ai-world-1.0'
   },
   extraTags
 )
@@ -199,6 +199,23 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
 }
 
 /* ------------------------------ Frontend App ------------------------------ */
+module frontendIdentity './modules/app/identity.bicep' = {
+  name: 'frontendIdentity'
+  scope: resourceGroup()
+  params: {
+    location: location
+    identityName: _frontendIdentityName
+  }
+}
+
+var keyvaultIdentities = authClientSecret != '' 
+  ? {
+      'microsoft-provider-authentication-secret': {
+        keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
+        identity: frontendIdentity.outputs.identityId
+      }
+    }
+  : {}
 
 module frontendApp 'modules/app/container-apps.bicep' = {
   name: 'frontend-container-app'
@@ -223,16 +240,11 @@ module frontendApp 'modules/app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: frontendIdentity.outputs.clientId
     }
-    keyvaultIdentities: {
-      'microsoft-provider-authentication-secret': {
-        keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
-        identity: frontendIdentity.outputs.identityId
-      }
-    }
+    keyvaultIdentities: keyvaultIdentities
   }
 }
 
-module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = {
+module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = if (authClientSecret != '') {
   name: 'frontend-container-app-auth-module'
   params: {
     name: frontendApp.outputs.name
@@ -246,17 +258,15 @@ module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = {
   }
 }
 
-module frontendIdentity './modules/app/identity.bicep' = {
-  name: 'frontendIdentity'
+/* ------------------------------ Backend App ------------------------------- */
+module backendIdentity './modules/app/identity.bicep' = {
+  name: 'backendIdentity'
   scope: resourceGroup()
   params: {
     location: location
-    identityName: _frontendIdentityName
+    identityName: _backendIdentityName
   }
 }
-
-
-/* ------------------------------ Backend App ------------------------------- */
 
 module backendApp 'modules/app/container-apps.bicep' = {
   name: 'backend-container-app'
@@ -269,7 +279,8 @@ module backendApp 'modules/app/container-apps.bicep' = {
     containerRegistryName: containerRegistry.outputs.name
     exists: backendExists
     serviceName: 'backend' // Must match the service name in azure.yaml
-    externalIngressAllowed: true
+    externalIngressAllowed: false // Set to true if you intend to call backend from the locallly deployed frontend
+                                  // Setting to true will allow traffic from anywhere
     env: {
       // Required for container app daprAI
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
@@ -277,41 +288,6 @@ module backendApp 'modules/app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
     }
-    keyvaultIdentities: {
-      'microsoft-provider-authentication-secret': {
-        keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
-        identity: backendIdentity.outputs.identityId
-      }
-    }
-  }
-}
-
-module backendContainerAppAuth 'modules/app/container-apps-auth.bicep' = {
-  name: 'backend-container-app-auth-module'
-  params: {
-    name: backendApp.outputs.name
-    clientId: authClientId
-    clientSecretName: 'microsoft-provider-authentication-secret'
-    openIdIssuer: '${environment().authentication.loginEndpoint}${authTenantId}/v2.0' // Works only for Microsoft Entra
-    unauthenticatedClientAction: 'Return401'
-    allowedApplications:[
-
-        frontendIdentity.outputs.clientId
-
-        '04b07795-8ddb-461a-bbee-02f9e1bf7b46' // AZ CLI for testing purposes
-    ]
-    allowedAudiences: [
-      'api://${authClientId}'
-    ]
-  }
-}
-
-module backendIdentity './modules/app/identity.bicep' = {
-  name: 'backendIdentity'
-  scope: resourceGroup()
-  params: {
-    location: location
-    identityName: _backendIdentityName
   }
 }
 
