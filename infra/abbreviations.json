@@ -1,4 +1,6 @@
 {
+  "aiPortalHub": "hub-",
+  "aiPortalProject": "proj-",
   "analysisServicesServers": "as",
   "apiManagementService": "apim-",
   "appConfigurationStores": "appcs-",
