@@ -8,7 +8,7 @@ The project is managed by pyproject.toml and [uv package manager](https://docs.a
 ```shell
 cd src/frontend
 uv sync
-. ./.venv/bin/actvate
+. ./.venv/bin/activate
 streamlit run app.py
 ```
 

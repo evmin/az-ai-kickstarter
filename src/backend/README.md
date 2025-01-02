@@ -9,7 +9,7 @@ For local execution init the .venv environment using [uv package manager](https:
 ```shell
 cd src/backend
 uv sync
-. ./.venv/bin/actvate
+. ./.venv/bin/activate
 python app.py
 ```
 

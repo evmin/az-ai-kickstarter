@@ -38,15 +38,11 @@ COPY app.py /app/
 
 FROM base
 
-SHELL ["sh", "-exc"]
-
 RUN groupadd -r app
 RUN useradd -r -d /app -g app -N app
 
-EXPOSE 8000
-STOPSIGNAL SIGINT
-
 COPY --from=builder --chown=app:app /app /app
-
 WORKDIR /app
+
+EXPOSE 8000
 ENTRYPOINT ["/app/.venv/bin/uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

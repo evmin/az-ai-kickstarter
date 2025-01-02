@@ -37,16 +37,13 @@ COPY app.py /app/
 ###############
 
 FROM base
-
-SHELL ["sh", "-exc"]
+STOPSIGNAL SIGINT
 
 RUN groupadd -r app
 RUN useradd -r -d /app -g app -N app
 
-EXPOSE 8000
-STOPSIGNAL SIGINT
-
 COPY --from=builder --chown=app:app /app /app
-
 WORKDIR /app
+
+EXPOSE 8000
 ENTRYPOINT ["/app/.venv/bin/streamlit", "run", "app.py", "--server.port=8000", "--server.address=0.0.0.0"]
