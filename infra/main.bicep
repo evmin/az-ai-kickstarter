@@ -148,7 +148,7 @@ module hub 'modules/ai/hub.bicep' = {
     keyVaultId: keyVault.outputs.resourceId
     storageAccountId: storageAccount.outputs.resourceId
     containerRegistryId: containerRegistry.outputs.resourceId
-    applicationInsightsId: appInsights.id
+    applicationInsightsId: appInsightsComponent.outputs.resourceId
     openAiName: azureOpenAi.outputs.name
     openAiConnectionName: 'aoai-connection'
     openAiContentSafetyConnectionName: 'aoai-content-safety-connection'
@@ -165,7 +165,6 @@ module project 'modules/ai/project.bicep' = {
     name: _aiProjectName
     displayName: _aiProjectName
     hubName: hub.outputs.name
-    
   }
 }
 
@@ -241,13 +240,19 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     deployments: [
       {
         name: 'gpt-4o'
+        sku: {
+          name: 'GlobalStandard'
+          capacity: 20
+        }
         model: {
           format: 'OpenAI'
           name: 'gpt-4o'
           version: '2024-05-13'
         }
+        versionUpgradeOption: 'OnceCurrentVersionExpired'
       }
     ]
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
   }
 }
 
@@ -262,25 +267,24 @@ module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
   }
 }
 
-
 /* ---------------------------- Observability  ------------------------------ */
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: _logAnalyticsWorkspaceName
-  location: location
-  properties: {
-    retentionInDays: 30
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.9.1' = {
+  name: 'workspaceDeployment'
+  params: {
+    name: _logAnalyticsWorkspaceName
+    location: location
+    tags: tags
+    dataRetention: 30
   }
-  tags: tags
 }
 
-resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+module appInsightsComponent 'br/public:avm/res/insights/component:0.4.2' = {
   name: _applicationInsightsName
-  location: appInsightsLocation
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalytics.id
+  params: {
+    name: _applicationInsightsName
+    location: appInsightsLocation
+    workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
   }
 }
 
@@ -300,19 +304,15 @@ module containerRegistry 'modules/app/container-registry.bicep' = {
   }
 }
 
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: _containerAppsEnvironmentName
-  location: location
-  tags: tags
-  properties: {
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalytics.properties.customerId
-        sharedKey: logAnalytics.listKeys().primarySharedKey
-      }
-    }
-    daprAIConnectionString: appInsights.properties.ConnectionString
+module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.8.1' = {
+  name: 'containerAppsEnvironment'
+  params: {
+    name: _containerAppsEnvironmentName
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    daprAIConnectionString: appInsightsComponent.outputs.connectionString
+    zoneRedundant: false
   }
 }
 
@@ -379,7 +379,7 @@ module frontendApp 'modules/app/container-apps.bicep' = {
     name: _frontendContainerAppName
     tags: tags
     identityId: frontendIdentity.outputs.resourceId
-    containerAppsEnvironmentName: containerAppsEnvironment.name
+    containerAppsEnvironmentName: containerAppsEnvironment.outputs.name
     containerRegistryName: containerRegistry.outputs.name
     exists: frontendExists
     serviceName: 'frontend' // Must match the service name in azure.yaml
@@ -391,7 +391,7 @@ module frontendApp 'modules/app/container-apps.bicep' = {
       AZURE_CLIENT_APP_ID: authClientId
 
       // Required for container app daprAI
-      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
+      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
 
       // Required for managed identity
       AZURE_CLIENT_ID: frontendIdentity.outputs.clientId
@@ -432,7 +432,7 @@ module backendApp 'modules/app/container-apps.bicep' = {
     name: _backendContainerAppName
     tags: tags
     identityId: backendIdentity.outputs.resourceId
-    containerAppsEnvironmentName: containerAppsEnvironment.name
+    containerAppsEnvironmentName: containerAppsEnvironment.outputs.name
     containerRegistryName: containerRegistry.outputs.name
     exists: backendExists
     serviceName: 'backend' // Must match the service name in azure.yaml
@@ -440,7 +440,7 @@ module backendApp 'modules/app/container-apps.bicep' = {
     // Setting to true will allow traffic from anywhere
     env: {
       // Required for container app daprAI
-      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
+      APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
 
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
