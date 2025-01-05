@@ -237,6 +237,7 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     tags: tags
     name: _azureOpenAiName
     kind: 'AIServices'
+    customSubDomainName: _azureOpenAiName
     deployments: [
       {
         name: 'gpt-4o'
@@ -253,6 +254,17 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
       }
     ]
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI User'
+        principalId: backendIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
+        principalId: azurePrincipalId
+      }
+    ]
   }
 }
 
@@ -474,3 +486,15 @@ output AZURE_PRINCIPAL_ID string = azurePrincipalId
 
 @description('Application registration client ID')
 output AZURE_CLIENT_APP_ID string = authClientId
+
+@description('Azure OpenAI name')
+output AZURE_OPENAI_NAME string = azureOpenAi.outputs.name
+
+@description('Azure OpenAI endpoint')
+output AZURE_OPENAI_ENDPOINT string = azureOpenAi.outputs.endpoint
+
+@description('Application Insights name')
+output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.name
+
+@description('Log Analytics Workspace name')
+output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = logAnalyticsWorkspace.outputs.name

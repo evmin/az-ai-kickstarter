@@ -1,5 +1,6 @@
 metadata description = 'Creates an Azure Cognitive Services instance.'
 
+import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.4.0'
 import { endpointsType, deploymentsType } from 'br/public:avm/res/cognitive-services/account:0.9.1'
 
 param name string
@@ -35,6 +36,9 @@ param networkAcls object = empty(allowedIpRules) ? {
 @description('Optional. The Resource ID of the Log Analytics workspace to send diagnostic logs to. If not provided, no logs will be sent.')
 param logAnalyticsWorkspaceResourceId string = ''
 
+@description('Optional. The list of role assignments to be created for the cognitive service account.')
+param roleAssignments roleAssignmentType[]?
+
 module account 'br/public:avm/res/cognitive-services/account:0.9.1' = {
   name: name
   params: {
@@ -67,6 +71,7 @@ module account 'br/public:avm/res/cognitive-services/account:0.9.1' = {
         workspaceResourceId: logAnalyticsWorkspaceResourceId
       }
     ]
+    roleAssignments: roleAssignments
   }
 }
 
