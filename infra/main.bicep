@@ -230,6 +230,24 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
   }
 }
 
+// Also rerefernced in the outputs with the sequential index
+// order of the model definitions is important
+var deployments = [
+      {
+        name: 'gpt-4o-2024-08-06'
+        sku: {
+          name: 'GlobalStandard'
+          capacity: 20
+        }
+        model: {
+          format: 'OpenAI'
+          name: 'gpt-4o'
+          version: '2024-08-06'
+        }
+        versionUpgradeOption: 'OnceCurrentVersionExpired'
+      }
+    ]
+
 module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   name: 'cognitiveServices'
   params: {
@@ -238,21 +256,7 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     name: _azureOpenAiName
     kind: 'AIServices'
     customSubDomainName: _azureOpenAiName
-    deployments: [
-      {
-        name: 'gpt-4o'
-        sku: {
-          name: 'GlobalStandard'
-          capacity: 20
-        }
-        model: {
-          format: 'OpenAI'
-          name: 'gpt-4o'
-          version: '2024-05-13'
-        }
-        versionUpgradeOption: 'OnceCurrentVersionExpired'
-      }
-    ]
+    deployments:  deployments
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
     roleAssignments: [
       {
@@ -492,6 +496,12 @@ output AZURE_OPENAI_NAME string = azureOpenAi.outputs.name
 
 @description('Azure OpenAI endpoint')
 output AZURE_OPENAI_ENDPOINT string = azureOpenAi.outputs.endpoint
+
+@description('Azure OpenAI Core Model Deployment Name')
+output AZURE_OPENAI_DEPLOYMENT_NAME string = deployments[0].name
+
+@description('Azure OpenAI Core Model Deployment Name')
+output AZURE_OPENAI_API_VERSION string = '2024-12-01-preview'
 
 @description('Application Insights name')
 output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.name
