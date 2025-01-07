@@ -30,7 +30,8 @@ RUN uv sync \
     --no-editable \
     --all-packages
 
-COPY app.py /app/
+COPY *.py /app/
+COPY agents /app/agents
 
 ###############
 # Final image #
