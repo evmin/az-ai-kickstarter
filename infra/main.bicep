@@ -94,6 +94,9 @@ var tags = union(
   extraTags
 )
 
+@description('Azure OpenAI API Version')
+var azureOpenAiApiVersion = '2024-12-01-preview'
+
 /* --------------------- Globally Unique Resource Names --------------------- */
 
 var _applicationInsightsName = !empty(applicationInsightsName)
@@ -237,7 +240,7 @@ var deployments = [
         name: 'gpt-4o-2024-08-06'
         sku: {
           name: 'GlobalStandard'
-          capacity: 20
+          capacity: 50
         }
         model: {
           format: 'OpenAI'
@@ -460,6 +463,9 @@ module backendApp 'modules/app/container-apps.bicep' = {
 
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
+      AZURE_OPENAI_ENDPOINT: azureOpenAi.outputs.endpoint
+      AZURE_OPENAI_DEPLOYMENT_NAME: deployments[0].name
+      AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
     }
   }
 }
@@ -501,7 +507,7 @@ output AZURE_OPENAI_ENDPOINT string = azureOpenAi.outputs.endpoint
 output AZURE_OPENAI_DEPLOYMENT_NAME string = deployments[0].name
 
 @description('Azure OpenAI Core Model Deployment Name')
-output AZURE_OPENAI_API_VERSION string = '2024-12-01-preview'
+output AZURE_OPENAI_API_VERSION string = azureOpenAiApiVersion
 
 @description('Application Insights name')
 output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.name

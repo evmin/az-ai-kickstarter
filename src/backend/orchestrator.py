@@ -1,6 +1,5 @@
 import os
 import logging
-import json
 import yaml
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from semantic_kernel.kernel import Kernel
@@ -15,20 +14,21 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt
+from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class SemanticOrchestrator:
     def __init__(self):
-        
+
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         self.logger.debug("Semantic Orchestrator Handler init")
-        
+
         self.logger.info(f"Creating - {os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")}")
-        
+
         gpt4o_service = AzureChatCompletion(service_id="gpt-4o",
                                             endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
                                             deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
@@ -41,7 +41,7 @@ class SemanticOrchestrator:
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ]
         )
-        
+
     # --------------------------------------------
     # Create Agent Group Chat
     # --------------------------------------------
@@ -63,8 +63,7 @@ class SemanticOrchestrator:
                 
                 selection_strategy=self.create_selection_strategy(agents, critic),
                 termination_strategy = self.create_termination_strategy(
-                                         agents=[writer,critic],
-                                         final_agent=critic,
+                                         agents=[critic],
                                          maximum_iterations=8))
 
         return agent_group_chat
@@ -115,27 +114,53 @@ class SemanticOrchestrator:
     # --------------------------------------------
     # Termination Strategy
     # --------------------------------------------
-    def create_termination_strategy(self, agents, final_agent, maximum_iterations):
+    def create_termination_strategy(self, agents, maximum_iterations):
         """
-        Create a chat termination strategy that terminates when the final agent is reached.
+        Create a chat termination strategy that terminates when the Critic is satisfied
         params:
-            agents: List of agents to trigger termination evaluation
-            final_agent: The agent that should trigger termination
+            agents: List of agents to trigger termination evaluation (critic only)
             maximum_iterations: Maximum number of iterations before termination
         """
+
         class CompletionTerminationStrategy(TerminationStrategy):
+            logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
+            
+            kernel: ClassVar[Kernel] = self.kernel
+            
+            termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
+                function_name="termination",
+                prompt_execution_settings=AzureChatPromptExecutionSettings(temperature=0),
+                prompt=fr"""
+                    You are data extraction assistant.
+                    Check the provided evaluation and return evalutation score.
+                    It MUST be a single number only, for example for 6/10 return 6.
+                    {{{{$evaluation}}}}
+                """)
+
             async def should_agent_terminate(self, agent, history):
-                """Terminate if the last actor is the Responder Agent."""
-                logging.getLogger(__name__).debug(history[-1])
-                return (agent.name == final_agent.name)
+                """Terminate if the evaluation score is more then the passing score."""
+                
+                arguments = KernelArguments()
+                arguments["evaluation"] = history[-1].content
+                
+                res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
+                logger.warning(f"Critic RESVAL: {res_val}")
+                
+                try:
+                    should_terminate = float(str(res_val)) >= 9.0
+                except ValueError:
+                    logger.warning(f"Should terminate error: {ValueError}")
+                    should_terminate = False
+                    
+                logger.warning(f"Should terminate: {should_terminate}")
+                return should_terminate
 
         return CompletionTerminationStrategy(agents=agents,
                                              maximum_iterations=maximum_iterations)
- 
-   
+
     async def process_conversation(self, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
-        
+
         # Load chat history - allow only assistant and user messages
         chat_history = [
             ChatMessageContent(
@@ -147,24 +172,25 @@ class SemanticOrchestrator:
 
         await agent_group_chat.add_chat_messages(chat_history)
 
-        async for _ in agent_group_chat.invoke():
-            pass
+        # async for _ in agent_group_chat.invoke():
+        #     pass
+        
+        async for a in agent_group_chat.invoke():
+            logger.warning(f"Agent: {a}")
+            
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
-        reply = {
-            'role': response[-1].role.value,
-            'name': response[-1].name,
-            'content': response[-1].content
-        }
+        # Writer response
+        reply = response[-2].to_dict()
 
         return reply
-    
+
     # --------------------------------------------
     # UTILITY - CREATES an agent based on YAML definition
     # --------------------------------------------
     def create_agent(self, kernel, service_id, definition_file_path):
-        
+
         with open(definition_file_path, 'r') as file:
             definition = yaml.safe_load(file)
 
@@ -181,4 +207,3 @@ class SemanticOrchestrator:
             description=definition['description'],
             instructions=definition['instructions']
         )
- 
