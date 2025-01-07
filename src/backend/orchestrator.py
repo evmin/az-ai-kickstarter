@@ -147,7 +147,7 @@ class SemanticOrchestrator:
                 logger.info(f"Critic Evaluation: {res_val}")
                 
                 try:
-                    should_terminate = float(str(res_val)) >= 8.0         # Using 8 for demo purposes. Try setting to 9.
+                    should_terminate = float(str(res_val)) >= 9.0         # 9 is a relatively high score. Set to 8 for stable result.
                 except ValueError:
                     logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False
