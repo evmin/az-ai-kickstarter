@@ -131,9 +131,9 @@ class SemanticOrchestrator:
                 function_name="termination",
                 prompt_execution_settings=AzureChatPromptExecutionSettings(temperature=0),
                 prompt=fr"""
-                    You are data extraction assistant.
-                    Check the provided evaluation and return evalutation score.
-                    It MUST be a single number only, for example for 6/10 return 6.
+                    You are a data extraction assistant.
+                    Check the provided evaluation and return the evalutation score.
+                    It MUST be a single number only, for example - for 6/10 return 6.
                     {{{{$evaluation}}}}
                 """)
 
@@ -141,18 +141,18 @@ class SemanticOrchestrator:
                 """Terminate if the evaluation score is more then the passing score."""
                 
                 arguments = KernelArguments()
-                arguments["evaluation"] = history[-1].content
+                arguments["evaluation"] = history[-1].content 
                 
                 res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
-                logger.warning(f"Critic RESVAL: {res_val}")
+                logger.info(f"Critic Evaluation: {res_val}")
                 
                 try:
-                    should_terminate = float(str(res_val)) >= 9.0
+                    should_terminate = float(str(res_val)) >= 8.0         # Using 8 for demo purposes. Try setting to 9.
                 except ValueError:
-                    logger.warning(f"Should terminate error: {ValueError}")
+                    logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False
                     
-                logger.warning(f"Should terminate: {should_terminate}")
+                logger.info(f"Should terminate: {should_terminate}")
                 return should_terminate
 
         return CompletionTerminationStrategy(agents=agents,
@@ -174,14 +174,12 @@ class SemanticOrchestrator:
 
         # async for _ in agent_group_chat.invoke():
         #     pass
-        
         async for a in agent_group_chat.invoke():
-            logger.warning(f"Agent: {a}")
-            
+            logger.info(f"Agent: {a}")
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
-        # Writer response
+        # Writer response, as we run termination evaluation on Critic only, so expecting Critic response to be the last
         reply = response[-2].to_dict()
 
         return reply

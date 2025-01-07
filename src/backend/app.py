@@ -17,15 +17,6 @@ logger.setLevel(logging.INFO)
 
 app = FastAPI()
 
-@app.get("/echo")
-async def http_trigger(request_body: dict = Body(...)):
-    logger.info('API request received with body %s', request_body)
-
-    return JSONResponse(
-        content=request_body,
-        status_code=200
-    )
-    
 @app.post("/blog")
 async def http_blog(request_body: dict = Body(...)):
     logger.info('API request received with body %s', request_body)
@@ -42,6 +33,16 @@ async def http_blog(request_body: dict = Body(...)):
 
     return JSONResponse(
         content=reply,
+        status_code=200
+    )
+
+# Not used. Keeping for demonstration purposes.
+@app.post("/echo")
+async def http_echo(request_body: dict = Body(...)):
+    logger.info('API request received with body %s', request_body)
+
+    return JSONResponse(
+        content=request_body,
         status_code=200
     )
 
