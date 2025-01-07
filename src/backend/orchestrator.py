@@ -16,6 +16,7 @@ from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
 from typing import ClassVar
+from pydantic import Field
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -64,7 +65,7 @@ class SemanticOrchestrator:
                 selection_strategy=self.create_selection_strategy(agents, critic),
                 termination_strategy = self.create_termination_strategy(
                                          agents=[critic],
-                                         maximum_iterations=8))
+                                         maximum_iterations=6))
 
         return agent_group_chat
 
@@ -83,9 +84,9 @@ class SemanticOrchestrator:
 
                     - You MUST return ONLY agent name from the list of available agents below.
                     - You MUST return the agent name and nothing else.
+                    - The agent names are case-sensitive and should not be abbreviated or changed.
                     - Check the history, and decide WHAT agent is the best next speaker
-                    - Make sure to call CRITIC agent to evaluate WRITER RESPONSE
-                    - The names are case-sensitive and should not be abbreviated or changed.
+                    - You MUST call CRITIC agent to evaluate WRITER RESPONSE
                     - YOU MUST OBSERVE AGENT USAGE INSTRUCTIONS.
 
 # AVAILABLE AGENTS
@@ -99,7 +100,7 @@ class SemanticOrchestrator:
 
         # Could be lambda. Keeping as function for clarity
         def parse_selection_output(output):
-            self.logger.debug(f"Parsing selection: {output}")
+            self.logger.info(f"------- Speaker selected: {output}")
             if output.value is not None:
                 return output.value[0].content
             return default_agent.name
@@ -125,6 +126,7 @@ class SemanticOrchestrator:
         class CompletionTerminationStrategy(TerminationStrategy):
             logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
             
+            iteration: int = Field(default=0)
             kernel: ClassVar[Kernel] = self.kernel
             
             termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
@@ -140,14 +142,18 @@ class SemanticOrchestrator:
             async def should_agent_terminate(self, agent, history):
                 """Terminate if the evaluation score is more then the passing score."""
                 
+                self.iteration += 1
+                logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
+                
                 arguments = KernelArguments()
                 arguments["evaluation"] = history[-1].content 
-                
+
                 res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
                 logger.info(f"Critic Evaluation: {res_val}")
-                
+
                 try:
-                    should_terminate = float(str(res_val)) >= 9.0         # 9 is a relatively high score. Set to 8 for stable result.
+                    # 9 is a relatively high score. Set to 8 for stable result.
+                    should_terminate = float(str(res_val)) >= 10.0        
                 except ValueError:
                     logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False
