@@ -1,20 +1,20 @@
 import logging
+import sys
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
 from orchestrator import SemanticOrchestrator
-from util import load_dotenv_from_azd
+from util import load_dotenv_from_azd, set_up_logging
 
 load_dotenv_from_azd()
-
-orchestrator = SemanticOrchestrator()
+set_up_logging()
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(levelname)s:   %(name)s - %(message)s',
+    format='%(levelname)s:   %(name)s   %(message)s',
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
+orchestrator = SemanticOrchestrator()
 app = FastAPI()
 
 @app.post("/blog")
@@ -48,4 +48,6 @@ async def http_echo(request_body: dict = Body(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+
+    # uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run("app:app", host="0.0.0.0", port=8000)

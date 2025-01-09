@@ -18,15 +18,12 @@ from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, Ke
 from typing import ClassVar
 from pydantic import Field
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 class SemanticOrchestrator:
     def __init__(self):
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        self.logger.debug("Semantic Orchestrator Handler init")
+        self.logger.info("Semantic Orchestrator Handler init")
 
         self.logger.info(f"Creating - {os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")}")
 
@@ -143,22 +140,22 @@ class SemanticOrchestrator:
                 """Terminate if the evaluation score is more then the passing score."""
                 
                 self.iteration += 1
-                logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
+                self.logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
                 
                 arguments = KernelArguments()
                 arguments["evaluation"] = history[-1].content 
 
                 res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
-                logger.info(f"Critic Evaluation: {res_val}")
+                self.logger.info(f"Critic Evaluation: {res_val}")
 
                 try:
                     # 9 is a relatively high score. Set to 8 for stable result.
-                    should_terminate = float(str(res_val)) >= 10.0        
+                    should_terminate = float(str(res_val)) >= 8.0        
                 except ValueError:
-                    logger.error(f"Should terminate error: {ValueError}")
+                    self.logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False
                     
-                logger.info(f"Should terminate: {should_terminate}")
+                self.logger.info(f"Should terminate: {should_terminate}")
                 return should_terminate
 
         return CompletionTerminationStrategy(agents=agents,
@@ -181,7 +178,7 @@ class SemanticOrchestrator:
         # async for _ in agent_group_chat.invoke():
         #     pass
         async for a in agent_group_chat.invoke():
-            logger.info(f"Agent: {a}")
+            self.logger.info(f"Agent: {a}")
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
