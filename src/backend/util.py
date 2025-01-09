@@ -1,50 +1,30 @@
+from io import StringIO
+from subprocess import run, PIPE
 import os
 import logging
 from dotenv import load_dotenv
-from io import StringIO
-from subprocess import run, PIPE
-import asyncio
-from typing import Literal
 
-# from opentelemetry import trace
-# from opentelemetry._logs import set_logger_provider
-# from opentelemetry.metrics import set_meter_provider
-# from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-# from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
-# from opentelemetry.sdk.metrics import MeterProvider
-# from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
-# from opentelemetry.sdk.metrics.view import DropAggregation, View
-# from opentelemetry.sdk.resources import Resource
-# from opentelemetry.sdk.trace import TracerProvider
-# from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-# from opentelemetry.semconv.resource import ResourceAttributes
-# from opentelemetry.trace import set_tracer_provider
-# from opentelemetry.trace.span import format_trace_id
-
-# from azure.monitor.opentelemetry.exporter import AzureMonitorMetricExporter
-# from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
-
-# from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-# from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-# from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-# from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-# from opentelemetry.exporter.otlp.proto.grpc import OTLPLogExporter, OTLPMetricExporter, OTLPSpanExporter
-
+from opentelemetry.sdk.resources import Resource
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.trace import set_tracer_provider
 
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+    # ConsoleLogExporter
+)
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import DropAggregation, View
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,
+    # ConsoleMetricExporter
+)
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    # ConsoleSpanExporter
+)
 from opentelemetry.semconv.resource import ResourceAttributes
 
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
@@ -56,23 +36,6 @@ from azure.monitor.opentelemetry.exporter import (
     AzureMonitorMetricExporter,
     AzureMonitorTraceExporter,
 )
-
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, AgentChat
-from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
-from semantic_kernel.agents.strategies import DefaultTerminationStrategy
-
-from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
-from semantic_kernel.connectors.ai import PromptExecutionSettings
-from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.kernel import Kernel
-from semantic_kernel.functions import KernelPlugin
-from semantic_kernel.utils.logging import setup_logging
-from semantic_kernel.core_plugins.time_plugin import TimePlugin
 
 def load_dotenv_from_azd():
     result = run("azd env get-values", stdout=PIPE, stderr=PIPE, shell=True, text=True)
@@ -129,6 +92,7 @@ def set_up_logging():
     # TODO: Conditional init if AZD/AspireDashboard Connection is present
 #     # if AZD and AspireDashboard Connection:
     exporters.append(OTLPLogExporter(endpoint=endpoint))
+    # exporters.append(ConsoleLogExporter())
 
     logger_provider = LoggerProvider(resource=resource)
     set_logger_provider(logger_provider)
