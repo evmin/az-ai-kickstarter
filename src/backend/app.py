@@ -3,16 +3,21 @@ import sys
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
 from orchestrator import SemanticOrchestrator
-from util import load_dotenv_from_azd, set_up_logging
+import util
+# from util import load_dotenv_from_azd, set_up_logging, set_up_tracing
 
-load_dotenv_from_azd()
-set_up_logging()
+util.load_dotenv_from_azd()
+util.set_up_tracing()
+util.set_up_metrics()
+util.set_up_logging()
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)s:   %(name)s   %(message)s',
 )
 logger = logging.getLogger(__name__)
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
 
 orchestrator = SemanticOrchestrator()
 app = FastAPI()

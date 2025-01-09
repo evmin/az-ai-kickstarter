@@ -514,3 +514,6 @@ output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.nam
 
 @description('Log Analytics Workspace name')
 output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = logAnalyticsWorkspace.outputs.name
+
+@description('Application Insights connection string')
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outputs.connectionString

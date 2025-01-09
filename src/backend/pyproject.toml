@@ -12,4 +12,6 @@ dependencies = [
     "semantic-kernel>=1.17.1",
     "opentelemetry-exporter-otlp-proto-grpc>=1.29.0",
     "opentelemetry-instrumentation>=0.50b0",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b32",
+    "azure-identity>=1.19.0",
 ]
