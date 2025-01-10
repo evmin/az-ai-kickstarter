@@ -1,10 +1,10 @@
+import os
 import logging
-import sys
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
 from orchestrator import SemanticOrchestrator
 import util
-# from util import load_dotenv_from_azd, set_up_logging, set_up_tracing
+
 
 util.load_dotenv_from_azd()
 util.set_up_tracing()
@@ -21,6 +21,8 @@ logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(loggin
 
 orchestrator = SemanticOrchestrator()
 app = FastAPI()
+
+logger.info(f"Diagnostics: {os.getenv('SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS')}")
 
 @app.post("/blog")
 async def http_blog(request_body: dict = Body(...)):

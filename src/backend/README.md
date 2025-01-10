@@ -10,7 +10,7 @@ For local execution init the .venv environment using [uv package manager](https:
 cd src/backend
 uv sync
 . ./.venv/bin/activate
-python app.py
+uvicorn app:app
 ```
 
 **OBS!** Environment variables will be read from the AZD env file: $project/.azure/<selected_azd_environment>/.env automatically
