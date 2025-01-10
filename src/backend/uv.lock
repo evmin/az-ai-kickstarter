@@ -115,6 +115,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/aa/47459ab2e67c55ff98dbb9694c47cf98e484ce1ae1acb244d28b25a8c1c1/azure_ai_inference-1.0.0b6-py3-none-any.whl", hash = "sha256:5699ad78d70ec2d227a5eff2c1bafc845018f6624edc5b03589dfff861c54958", size = 115312 },
 ]
 
+[package.optional-dependencies]
+opentelemetry = [
+    { name = "azure-core-tracing-opentelemetry" },
+]
+
 [[package]]
 name = "azure-core"
 version = "1.32.0"
@@ -127,6 +132,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cc/ee/668328306a9e963a5ad9f152cd98c7adad86c822729fd1d2a01613ad1e67/azure_core-1.32.0.tar.gz", hash = "sha256:22b3c35d6b2dae14990f6c1be2912bf23ffe50b220e708a28ab1bb92b1c730e5", size = 279128 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/83/325bf5e02504dbd8b4faa98197a44cdf8a325ef259b48326a2b6f17f8383/azure_core-1.32.0-py3-none-any.whl", hash = "sha256:eac191a0efb23bfa83fddf321b27b122b4ec847befa3091fa736a5c32c50d7b4", size = 198855 },
+]
+
+[[package]]
+name = "azure-core-tracing-opentelemetry"
+version = "1.0.0b11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "opentelemetry-api" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ab/f2/2ede1654987b82f45dffe0e82d0d77b13940bb88d044138090c8b7baa439/azure-core-tracing-opentelemetry-1.0.0b11.tar.gz", hash = "sha256:a230d1555838b5d07b7594221cd639ea7bc24e29c881e5675e311c6067bad4f5", size = 19097 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/6e/3ef6dfba8e0faa4692caa6d103c721ccba6ac37a24744848a3a10bb3fe89/azure_core_tracing_opentelemetry-1.0.0b11-py3-none-any.whl", hash = "sha256:016cefcaff2900fb5cdb7a8a7abd03e9c266622c06e26b3fe6dafa54c4b48bf5", size = 10710 },
 ]
 
 [[package]]
@@ -167,7 +185,7 @@ name = "backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "azure-ai-inference" },
+    { name = "azure-ai-inference", extra = ["opentelemetry"] },
     { name = "azure-identity" },
     { name = "azure-monitor-opentelemetry-exporter" },
     { name = "fastapi" },
@@ -181,7 +199,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "azure-ai-inference", specifier = ">=1.0.0b6" },
+    { name = "azure-ai-inference", extras = ["opentelemetry"], specifier = ">=1.0.0b6" },
     { name = "azure-identity", specifier = ">=1.19.0" },
     { name = "azure-monitor-opentelemetry-exporter", specifier = ">=1.0.0b32" },
     { name = "fastapi", specifier = "~=0.115.6" },

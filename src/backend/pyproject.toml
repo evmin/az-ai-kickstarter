@@ -14,5 +14,5 @@ dependencies = [
     "opentelemetry-instrumentation>=0.50b0",
     "azure-monitor-opentelemetry-exporter>=1.0.0b32",
     "azure-identity>=1.19.0",
-    "azure-ai-inference>=1.0.0b6",
+    "azure-ai-inference[opentelemetry]>=1.0.0b6",
 ]
