@@ -1,7 +1,9 @@
 import os
 import logging
+from typing import ClassVar
 import yaml
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents import AgentGroupChat
 from semantic_kernel.agents import ChatCompletionAgent
@@ -9,13 +11,19 @@ from semantic_kernel.agents.strategies.termination.termination_strategy import T
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
-from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
-from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
-from typing import ClassVar
+
+# OPERATIONAL
+# from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
+# from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
+from azure.ai.inference.aio import ChatCompletionsClient
+from azure.identity.aio import DefaultAzureCredential
+
 from pydantic import Field
 
 class SemanticOrchestrator:
@@ -25,20 +33,31 @@ class SemanticOrchestrator:
         self.logger.setLevel(logging.INFO)
         self.logger.info("Semantic Orchestrator Handler init")
 
-        self.logger.info(f"Creating - {os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")}")
+        self.logger.info("Creating - %s", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"))
 
-        gpt4o_service = AzureChatCompletion(service_id="gpt-4o",
-                                            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-                                            deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-                                            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-                                            ad_token_provider=get_bearer_token_provider(DefaultAzureCredential(),"https://cognitiveservices.azure.com/.default"))
-
+        # OPERATIONAL
+        # gpt4o_service = AzureChatCompletion(service_id="gpt-4o",
+        #                                     endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        #                                     deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        #                                     api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        #                                     ad_token_provider=get_bearer_token_provider(DefaultAzureCredential(),"https://cognitiveservices.azure.com/.default"))
+        
+        # FAILS
+        endpoint = f"{str(os.getenv('AZURE_OPENAI_ENDPOINT')).strip('/')}/openai/deployments/{os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")}",
+        gpt4o_service = AzureAIInferenceChatCompletion(
+            ai_model_id=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            service_id="gpt-4o",
+            client=ChatCompletionsClient(
+                endpoint=endpoint,
+                credential=DefaultAzureCredential(),
+                credential_scopes=["https://cognitiveservices.azure.com/.default"],
+            ))
+        
         self.kernel = Kernel(
             services=[gpt4o_service],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
-            ]
-        )
+            ])
 
     # --------------------------------------------
     # Create Agent Group Chat
@@ -74,8 +93,7 @@ class SemanticOrchestrator:
         definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
         selection_function = KernelFunctionFromPrompt(
                 function_name="selection",
-                prompt_execution_settings=AzureChatPromptExecutionSettings(
-                    temperature=0),
+                prompt_execution_settings=AzureChatPromptExecutionSettings( temperature=0),
                 prompt=fr"""
                     You are the next speaker selector.
 
