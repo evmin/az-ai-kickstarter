@@ -18,7 +18,7 @@ ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
     # UV_PYTHON_DOWNLOADS=never \
-    # UV_PYTHON=python3.12 \
+    # UV_PYTHON=python3.12
 
 WORKDIR /app
 

@@ -105,10 +105,7 @@ var _applicationInsightsName = !empty(applicationInsightsName)
 var _logAnalyticsWorkspaceName = !empty(logAnalyticsWorkspaceName)
   ? logAnalyticsWorkspaceName
   : take('${abbreviations.operationalInsightsWorkspaces}${environmentName}', 63)
-var _containerRegistryName = !empty(containerRegistryName)
-  ? containerRegistryName
-  : take('${abbreviations.containerRegistryRegistries}${take(alphaNumericEnvironmentName, 35)}${resourceToken}', 50)
-var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}${resourceToken}', 24)
+
 var _storageAccountName = take(
   '${abbreviations.storageStorageAccounts}${alphaNumericEnvironmentName}${resourceToken}',
   24
@@ -117,6 +114,11 @@ var _azureOpenAiName = take('${abbreviations.cognitiveServicesOpenAI}${alphaNume
 var _aiHubName = take('${abbreviations.aiPortalHub}${environmentName}', 260)
 var _aiProjectName = take('${abbreviations.aiPortalProject}${environmentName}', 260)
 var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
+
+var _containerRegistryName = !empty(containerRegistryName)
+  ? containerRegistryName
+  : take('${abbreviations.containerRegistryRegistries}${take(alphaNumericEnvironmentName, 35)}${resourceToken}', 50)
+var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}${resourceToken}', 24)
 var _containerAppsEnvironmentName = !empty(containerAppsEnvironmentName)
   ? containerAppsEnvironmentName
   : take('${abbreviations.appManagedEnvironments}${environmentName}', 60)
@@ -456,7 +458,7 @@ module backendApp 'modules/app/container-apps.bicep' = {
     exists: backendExists
     serviceName: 'backend' // Must match the service name in azure.yaml
     externalIngressAllowed: false // Set to true if you intend to call backend from the locallly deployed frontend
-    // Setting to true will allow traffic from anywhere
+                                  // Setting to true will allow traffic from anywhere
     env: {
       // Required for container app daprAI
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
@@ -466,6 +468,7 @@ module backendApp 'modules/app/container-apps.bicep' = {
 
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
+
       AZURE_OPENAI_ENDPOINT: azureOpenAi.outputs.endpoint
       AZURE_OPENAI_DEPLOYMENT_NAME: deployments[0].name
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
