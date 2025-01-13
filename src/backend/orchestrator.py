@@ -49,6 +49,8 @@ class SemanticOrchestrator:
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
+        
+        self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
 
     # --------------------------------------------
     # Create Agent Group Chat
@@ -170,7 +172,7 @@ class SemanticOrchestrator:
         return CompletionTerminationStrategy(agents=agents,
                                              maximum_iterations=maximum_iterations)
 
-    async def process_conversation(self, conversation_messages):
+    async def process_conversation(self, user_id, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
 
         # Load chat history - allow only assistant and user messages
@@ -185,14 +187,17 @@ class SemanticOrchestrator:
         await agent_group_chat.add_chat_messages(chat_history)
 
         tracer = get_tracer(__name__)
-        # Use session if as current span
+        
+        # UNIQUE SESSION ID is a must : get the name of the provider
         # Define current timestamp
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        with tracer.start_as_current_span(current_time):
+        session_id = f"{self.resourceGroup}-{user_id}-{current_time}"
+        
+        with tracer.start_as_current_span(session_id):
             # async for _ in agent_group_chat.invoke():
                 #     pass
             async for a in agent_group_chat.invoke():
-                self.logger.info(f"Agent: {a}")
+                self.logger.info("Agent: %s", a)
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
@@ -206,7 +211,7 @@ class SemanticOrchestrator:
     # --------------------------------------------
     def create_agent(self, kernel, service_id, definition_file_path):
 
-        with open(definition_file_path, 'r') as file:
+        with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
 
         return ChatCompletionAgent(

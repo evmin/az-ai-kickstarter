@@ -46,42 +46,42 @@ def load_dotenv_from_azd():
         logging.info(f"AZD environment not found. Trying to load from .env file...")
         load_dotenv()
 
-# TODO: Generate the name? Get Current Deployment/RG?
-resource = Resource.create({ResourceAttributes.SERVICE_NAME: "ai-accelerator"})
+telemetry_resource = Resource.create({ResourceAttributes.SERVICE_NAME: os.getenv("AZURE_RESOURCE_GROUP","ai-accelerator")})
 
-# Endpoint to the Aspire Dashboard
-endpoint = "http://localhost:4317"
+# Set endpoint to the local Aspire Dashboard endpoint to enable local telemetry - DISABLED by default
+local_endpoint = None
+# local_endpoint = "http://localhost:4317"
 
 
 def set_up_tracing():
     exporters = []
     exporters.append(AzureMonitorTraceExporter.from_connection_string(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
-    exporters.append(OTLPSpanExporter(endpoint=endpoint))
+    if (local_endpoint):
+        exporters.append(OTLPSpanExporter(endpoint=local_endpoint))
 
-    tracer_provider = TracerProvider(resource=resource)
+    tracer_provider = TracerProvider(resource=telemetry_resource)
     for trace_exporter in exporters:
         tracer_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
-        
     set_tracer_provider(tracer_provider)
 
 
 def set_up_metrics():
     exporters = []
-    exporters.append(OTLPMetricExporter(endpoint=endpoint))
+    if (local_endpoint):
+        exporters.append(OTLPMetricExporter(endpoint=local_endpoint))
     exporters.append(AzureMonitorMetricExporter.from_connection_string(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
 
     metric_readers = [PeriodicExportingMetricReader(exporter, export_interval_millis=5000) for exporter in exporters]
 
     meter_provider = MeterProvider(
         metric_readers=metric_readers,
-        resource=resource,
+        resource=telemetry_resource,
         views=[
             # Dropping all instrument names except for those starting with "semantic_kernel"
             View(instrument_name="*", aggregation=DropAggregation()),
             View(instrument_name="semantic_kernel*"),
         ],
     )
-    # Sets the global default meter provider
     set_meter_provider(meter_provider)
 
 
@@ -89,12 +89,11 @@ def set_up_logging():
     exporters = []
     exporters.append(AzureMonitorLogExporter(connection_string=os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
 
-    # TODO: Conditional init if AZD/AspireDashboard Connection is present
-#     # if AZD and AspireDashboard Connection:
-    exporters.append(OTLPLogExporter(endpoint=endpoint))
+    if (local_endpoint):
+        exporters.append(OTLPLogExporter(endpoint=local_endpoint))
     # exporters.append(ConsoleLogExporter())
 
-    logger_provider = LoggerProvider(resource=resource)
+    logger_provider = LoggerProvider(resource=telemetry_resource)
     set_logger_provider(logger_provider)
 
     handler = LoggingHandler()

@@ -460,6 +460,9 @@ module backendApp 'modules/app/container-apps.bicep' = {
     env: {
       // Required for container app daprAI
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
+      AZURE_RESOURCE_GROUP: resourceGroup().name
+      SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS: true
+      SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE: true // OBS! You might want to remove this in production
 
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
@@ -518,5 +521,5 @@ output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = logAnalyticsWorkspace.outputs
 @description('Application Insights connection string')
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outputs.connectionString
 
-@description('Semanti Kernel Diagnostics')
+@description('Semantic Kernel Diagnostics')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true

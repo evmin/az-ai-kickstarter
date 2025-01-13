@@ -32,10 +32,17 @@ def get_principal_name():
     else:
         return "Anonymous"
 
+def get_principal_id():
+    result = st.context.headers.get('x-ms-client-principal-id')
+    if result:
+        return result
+    else:
+        return "default_user_id"
+
 load_dotenv_from_azd()
 
 st.write(get_principal_name())
 st.markdown('<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True)
 
 st.write("Calling backend API...")
-st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), {"topic": "cookies"}).json())
+st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), {"topic": "cookies", "user_id": get_principal_id()}).json())
