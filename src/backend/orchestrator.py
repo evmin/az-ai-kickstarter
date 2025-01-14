@@ -85,7 +85,7 @@ class SemanticOrchestrator:
         """Speaker selection strategy for the agent group chat."""
         definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
         selection_function = KernelFunctionFromPrompt(
-                function_name="selection",
+                function_name="SpeakerSelector",
                 prompt_execution_settings=AzureChatPromptExecutionSettings( temperature=0),
                 prompt=fr"""
                     You are the next speaker selector.
@@ -138,7 +138,7 @@ class SemanticOrchestrator:
             kernel: ClassVar[Kernel] = self.kernel
             
             termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
-                function_name="termination",
+                function_name="TerminationEvaluator",
                 prompt_execution_settings=AzureChatPromptExecutionSettings(temperature=0),
                 prompt=fr"""
                     You are a data extraction assistant.
