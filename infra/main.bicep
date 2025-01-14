@@ -33,6 +33,9 @@ param applicationInsightsName string = ''
 @description('Application Insights Location')
 param appInsightsLocation string = location
 
+@description('Activate authentication if true. Defaults to false.')
+param withAuthentication bool = false
+
 @description('The auth tenant id for the frontend and backend app (leave blank in AZD to use your current tenant)')
 param authTenantId string = '' // Make sure authTenantId is set if not using AZD
 
@@ -238,20 +241,20 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
 // Also rerefernced in the outputs with the sequential index
 // order of the model definitions is important
 var deployments = [
-      {
-        name: 'gpt-4o-2024-08-06'
-        sku: {
-          name: 'GlobalStandard'
-          capacity: 50
-        }
-        model: {
-          format: 'OpenAI'
-          name: 'gpt-4o'
-          version: '2024-08-06'
-        }
-        versionUpgradeOption: 'OnceCurrentVersionExpired'
-      }
-    ]
+  {
+    name: 'gpt-4o-2024-08-06'
+    sku: {
+      name: 'GlobalStandard'
+      capacity: 50
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o'
+      version: '2024-08-06'
+    }
+    versionUpgradeOption: 'OnceCurrentVersionExpired'
+  }
+]
 
 module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   name: 'cognitiveServices'
@@ -261,7 +264,7 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     name: _azureOpenAiName
     kind: 'AIServices'
     customSubDomainName: _azureOpenAiName
-    deployments:  deployments
+    deployments: deployments
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
     roleAssignments: [
       {
@@ -362,14 +365,14 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
         roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
-    secrets: empty(authClientSecret)
-      ? []
-      : [
+    secrets: withAuthentication && authClientSecret != ''
+      ? [
           {
             name: authClientSecretName
             value: authClientSecret
           }
         ]
+      : []
   }
 }
 
@@ -384,7 +387,7 @@ module frontendIdentity './modules/app/identity.bicep' = {
   }
 }
 
-var keyvaultIdentities = authClientSecret != ''
+var keyvaultIdentities = withAuthentication
   ? {
       'microsoft-provider-authentication-secret': {
         keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
@@ -421,7 +424,7 @@ module frontendApp 'modules/app/container-apps.bicep' = {
   }
 }
 
-module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = if (authClientSecret != '') {
+module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = if (withAuthentication) {
   name: 'frontend-container-app-auth-module'
   params: {
     name: frontendApp.outputs.name
@@ -458,7 +461,7 @@ module backendApp 'modules/app/container-apps.bicep' = {
     exists: backendExists
     serviceName: 'backend' // Must match the service name in azure.yaml
     externalIngressAllowed: false // Set to true if you intend to call backend from the locallly deployed frontend
-                                  // Setting to true will allow traffic from anywhere
+    // Setting to true will allow traffic from anywhere
     env: {
       // Required for container app daprAI
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
@@ -493,6 +496,9 @@ output SERVICE_FRONTEND_URL string = frontendApp.outputs.URL
 
 @description('Endpoint URL of the Backend service')
 output SERVICE_BACKEND_URL string = backendApp.outputs.URL
+
+@description('Activate authentication if true')
+output WITH_AUTHENTICATION bool = withAuthentication
 
 @description('ID of the tenant we are deploying to')
 output AZURE_AUTH_TENANT_ID string = authTenantId
