@@ -1,7 +1,9 @@
+import base64
+import json
 import logging
 import os
-import streamlit as st
 import requests
+import streamlit as st
 from dotenv import load_dotenv
 from io import StringIO
 from subprocess import run, PIPE
@@ -39,9 +41,19 @@ def get_principal_id():
     else:
         return "default_user_id"
 
+def get_principal_display_name():
+    default_user_name = "Default User"
+    principal = st.context.headers.get('x-ms-client-principal')
+    if principal:
+        principal = json.loads(base64.b64decode(principal).decode('utf-8'))
+        claims = principal.get("claims", [])
+        return next((claim["val"] for claim in claims if claim["typ"] == "name"), default_user_name)
+    else:
+        return default_user_name
+
 load_dotenv_from_azd()
 
-st.write(get_principal_name())
+st.write(f"Welcome {get_principal_display_name()}!")
 st.markdown('<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True)
 
 st.write("Calling backend API...")
