@@ -36,6 +36,18 @@ param appInsightsLocation string = location
 @description('Activate authentication if true. Defaults to false.')
 param withAuthentication bool = false
 
+@description('Optional. Defines the SKU of an Azure AI Search Service, which determines price tier and capacity limits.')
+@allowed([
+  'basic'
+  'free'
+  'standard'
+  'standard2'
+  'standard3'
+  'storage_optimized_l1'
+  'storage_optimized_l2'
+])
+param aiSearchSkuName string = 'basic'
+
 @description('The auth tenant id for the frontend and backend app (leave blank in AZD to use your current tenant)')
 param authTenantId string = '' // Make sure authTenantId is set if not using AZD
 
@@ -286,8 +298,8 @@ module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
   params: {
     location: location
     tags: tags
-    name: _aiProjectName
-    sku: 'standard'
+    name: _aiSearchServiceName
+    sku: aiSearchSkuName
   }
 }
 
