@@ -33,6 +33,9 @@ param applicationInsightsName string = ''
 @description('Application Insights Location')
 param appInsightsLocation string = location
 
+@description('Activate authentication if true. Defaults to false.')
+param withAuthentication bool = false
+
 @description('The auth tenant id for the frontend and backend app (leave blank in AZD to use your current tenant)')
 param authTenantId string = '' // Make sure authTenantId is set if not using AZD
 
@@ -105,10 +108,7 @@ var _applicationInsightsName = !empty(applicationInsightsName)
 var _logAnalyticsWorkspaceName = !empty(logAnalyticsWorkspaceName)
   ? logAnalyticsWorkspaceName
   : take('${abbreviations.operationalInsightsWorkspaces}${environmentName}', 63)
-var _containerRegistryName = !empty(containerRegistryName)
-  ? containerRegistryName
-  : take('${abbreviations.containerRegistryRegistries}${take(alphaNumericEnvironmentName, 35)}${resourceToken}', 50)
-var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}${resourceToken}', 24)
+
 var _storageAccountName = take(
   '${abbreviations.storageStorageAccounts}${alphaNumericEnvironmentName}${resourceToken}',
   24
@@ -117,6 +117,11 @@ var _azureOpenAiName = take('${abbreviations.cognitiveServicesOpenAI}${alphaNume
 var _aiHubName = take('${abbreviations.aiPortalHub}${environmentName}', 260)
 var _aiProjectName = take('${abbreviations.aiPortalProject}${environmentName}', 260)
 var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
+
+var _containerRegistryName = !empty(containerRegistryName)
+  ? containerRegistryName
+  : take('${abbreviations.containerRegistryRegistries}${take(alphaNumericEnvironmentName, 35)}${resourceToken}', 50)
+var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}${resourceToken}', 24)
 var _containerAppsEnvironmentName = !empty(containerAppsEnvironmentName)
   ? containerAppsEnvironmentName
   : take('${abbreviations.appManagedEnvironments}${environmentName}', 60)
@@ -236,20 +241,20 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
 // Also rerefernced in the outputs with the sequential index
 // order of the model definitions is important
 var deployments = [
-      {
-        name: 'gpt-4o-2024-08-06'
-        sku: {
-          name: 'GlobalStandard'
-          capacity: 50
-        }
-        model: {
-          format: 'OpenAI'
-          name: 'gpt-4o'
-          version: '2024-08-06'
-        }
-        versionUpgradeOption: 'OnceCurrentVersionExpired'
-      }
-    ]
+  {
+    name: 'gpt-4o-2024-08-06'
+    sku: {
+      name: 'GlobalStandard'
+      capacity: 50
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o'
+      version: '2024-08-06'
+    }
+    versionUpgradeOption: 'OnceCurrentVersionExpired'
+  }
+]
 
 module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   name: 'cognitiveServices'
@@ -259,7 +264,7 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     name: _azureOpenAiName
     kind: 'AIServices'
     customSubDomainName: _azureOpenAiName
-    deployments:  deployments
+    deployments: deployments
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
     roleAssignments: [
       {
@@ -360,14 +365,14 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
         roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
-    secrets: empty(authClientSecret)
-      ? []
-      : [
+    secrets: withAuthentication && authClientSecret != ''
+      ? [
           {
             name: authClientSecretName
             value: authClientSecret
           }
         ]
+      : []
   }
 }
 
@@ -382,7 +387,7 @@ module frontendIdentity './modules/app/identity.bicep' = {
   }
 }
 
-var keyvaultIdentities = authClientSecret != ''
+var keyvaultIdentities = withAuthentication
   ? {
       'microsoft-provider-authentication-secret': {
         keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
@@ -419,7 +424,7 @@ module frontendApp 'modules/app/container-apps.bicep' = {
   }
 }
 
-module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = if (authClientSecret != '') {
+module frontendContainerAppAuth 'modules/app/container-apps-auth.bicep' = if (withAuthentication) {
   name: 'frontend-container-app-auth-module'
   params: {
     name: frontendApp.outputs.name
@@ -460,9 +465,13 @@ module backendApp 'modules/app/container-apps.bicep' = {
     env: {
       // Required for container app daprAI
       APPLICATIONINSIGHTS_CONNECTION_STRING: appInsightsComponent.outputs.connectionString
+      AZURE_RESOURCE_GROUP: resourceGroup().name
+      SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS: true
+      SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE: true // OBS! You might want to remove this in production
 
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
+
       AZURE_OPENAI_ENDPOINT: azureOpenAi.outputs.endpoint
       AZURE_OPENAI_DEPLOYMENT_NAME: deployments[0].name
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
@@ -487,6 +496,9 @@ output SERVICE_FRONTEND_URL string = frontendApp.outputs.URL
 
 @description('Endpoint URL of the Backend service')
 output SERVICE_BACKEND_URL string = backendApp.outputs.URL
+
+@description('Activate authentication if true')
+output WITH_AUTHENTICATION bool = withAuthentication
 
 @description('ID of the tenant we are deploying to')
 output AZURE_AUTH_TENANT_ID string = authTenantId
@@ -514,3 +526,9 @@ output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.nam
 
 @description('Log Analytics Workspace name')
 output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = logAnalyticsWorkspace.outputs.name
+
+@description('Application Insights connection string')
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outputs.connectionString
+
+@description('Semantic Kernel Diagnostics')
+output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true
