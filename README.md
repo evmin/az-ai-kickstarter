@@ -16,9 +16,16 @@ This respository has been configured to support GitHub Codespace and DevContaine
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/dbroeglin/hello-ai-world) [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/dbroeglin/hello-ai-world)
 
+> [!WARNING]
+> Do NOT `git clone` the application under Windows and then open a DevContainer. 
+> This would create issues with file end of lines. For DevContainer click on the button 
+> above and let Visual Studio Code download the repository for you. Alternatively you 
+> can also `git clone` under Windows Subsystem for Linux (WSL) and ask Visual Studio Code to
+> `Re-Open in Container`.
+
 ### Local
 
-It is possible to operate the fully local setup.
+It is possible to work with a fully local setup.
 
   - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/what-is-azure-cli): `az`
   - [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/overview): `azd`
@@ -27,16 +34,18 @@ It is possible to operate the fully local setup.
   - Optionally [Docker](https://www.docker.com/get-started/): `docker` 
 
 > [!TIP] 
-> **AI GBB Tip**: Document here how to quickly deploy the solution. Try to reduce this to `azd up` by
+> **Az AI Tip**: Document here how to quickly deploy the solution. Try to reduce this to `azd up` by
 > automating as much as possible. Have a look at `main.bicep` and `scripts` for examples of how to do
 > that
 
 ### Quick deploy
 
 To deploy Hello AI World just run: 
-`azd up`
+```bash
+azd up
+``` 
 
-> **WARNING** The application automatically configures authentication to secure frontend
+> [!WARNING] The application automatically configures authentication to secure frontend
 > To do so it creates an app registration in EntraID. 
 > If the account you are using to deploy the app does not have the required permissions, disable the preprovision script in azure.yaml
 
@@ -47,9 +56,10 @@ To deploy Hello AI World just run:
 
 ### User Manual
 
-- TODO : Obervability
+- TODO : Observability
+
 > [!TIP] 
-> **AI GBB Tip**: Document how the solution is used and operated here.
+> **Az AI Tip**: Document how the solution is used and operated here.
 > Optionally, if the section is too long, create a `USER_MANUAL.md` file and
 > link to it from here.
 

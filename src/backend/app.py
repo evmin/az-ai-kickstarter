@@ -26,16 +26,16 @@ logger.info("Diagnostics: %s", os.getenv('SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENAB
 @app.post("/blog")
 async def http_blog(request_body: dict = Body(...)):
     logger.info('API request received with body %s', request_body)
-    
+
     topic = request_body.get('topic', 'Tesla')
     user_id = request_body.get('user_id', 'default_user')
     content = f"Write a blog post about {topic}."
-    
+
     conversation_messages = []
     conversation_messages.append({'role': 'user', 'name': 'user', 'content': content})
-    
+
     reply = await orchestrator.process_conversation(user_id, conversation_messages)
-    
+
     conversation_messages.append(reply)
 
     return JSONResponse(
