@@ -2,13 +2,13 @@
     "api": {
         "oauth2PermissionScopes": [
             {
-                "adminConsentDescription": "Hello AI World",
-                "adminConsentDisplayName": "Hello AI World",
+                "adminConsentDescription": "AZ AI Kickstarter",
+                "adminConsentDisplayName": "AZ AI Kickstarter",
                 "id": "82b64a34-ac61-4e2a-a9aa-bda145ef0de6",
                 "isEnabled": true,
                 "type": "User",
-                "userConsentDescription": "Hello AI World",
-                "userConsentDisplayName": "Hello AI World",
+                "userConsentDescription": "AZ AI Kickstarter",
+                "userConsentDisplayName": "AZ AI Kickstarter",
                 "value": "user_impersonation"
             }
         ]
