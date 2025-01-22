@@ -1,5 +1,5 @@
 # see https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/azd-schema
-name: hello-ai-world
+name: azai-kickstarter
 services:
   backend:
     language: python

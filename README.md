@@ -4,7 +4,7 @@ ToC: [**USER STORY**](#user-story) \| [**GETTING STARTED**](#getting-started)  \
 
 ## User story
 
-### Hello AI World overview
+### AZ AI Kickstarter overview
 
 L100 level aplication stub for an AI copilot/agent.
 
@@ -14,7 +14,6 @@ L100 level aplication stub for an AI copilot/agent.
 
 This respository has been configured to support GitHub Codespace and DevContainers.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/dbroeglin/hello-ai-world) [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/dbroeglin/hello-ai-world)
 
 > [!WARNING]
 > Do NOT `git clone` the application under Windows and then open a DevContainer. 
@@ -40,7 +39,7 @@ It is possible to work with a fully local setup.
 
 ### Quick deploy
 
-To deploy Hello AI World just run: 
+To deploy AZ AI Kickstarter just run: 
 ```bash
 azd up
 ``` 
