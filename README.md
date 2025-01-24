@@ -40,13 +40,30 @@ It is possible to work with a fully local setup.
 
 ### Quick deploy
 
+
+#### Deployment pre-requisites
+
+Codespaces and DevContainer come with all deployment and development pre-requisites already installed.
+
+On Windows you can install the pre-requisites by executing the following commands in a PowerShell terminal:
+```powershell
+	winget install Python.Python.3.13
+	winget install Microsoft.PowerShell
+	winget install Microsoft.AzureCLI
+	winget install Microsoft.Azd
+	winget install Microsoft.Git
+```
+
+Ubuntu/WSL: TBD
+
+MacOSX: TBD
+
+#### Deploy with authentication disabled
+
 To deploy Azure AI App Kickstarter just run: 
 ```bash
 azd up
 ``` 
-
-> [!NOTE] On Windows you need `pwsh` available in the command line. If needed run `winget install Microsoft.PowerShell`
-> before running `azd up`
 
 #### Deploy with authentication enabled
 
@@ -54,13 +71,14 @@ AZD can automatically configures authentication to secure frontend and/or backen
 ```bash
 azd env set WITH_AUTHENTICATION true
 ```
-If you already executed `azd up` just run provisioning again:
+
+If you already executed `azd up` just set the variable and run provisioning again:
 ```bash
 azd env set WITH_AUTHENTICATION true
 azd provision
 ```
 
-> [!WARNING] The account executing `azd` needs to be able to create Application Registration in your Azure
+> [!WARNING] The account executing `azd` needs to be able to create Application Registrations in your Azure
 > Entra ID tenant.
 
 ## How it works
