@@ -1,5 +1,5 @@
-metadata name = 'azai-kickstarter'
-metadata description = 'Deploys the infrastructure for AZ AI Kickstarter'
+metadata name = 'az-ai-kickstarter'
+metadata description = 'Deploys the infrastructure for Azure AI App Kickstarter'
 metadata author = 'AI GBB EMEA <eminkevich@microsoft.com>'
 
 /* -------------------------------------------------------------------------- */
@@ -104,7 +104,7 @@ var alphaNumericEnvironmentName = replace(replace(environmentName, '-', ''), ' '
 var tags = union(
   {
     'azd-env-name': environmentName
-    solution: 'azai-kickstarter'
+    solution: 'az-ai-kickstarter'
   },
   extraTags
 )
@@ -130,10 +130,10 @@ var _aiHubName = take('${abbreviations.aiPortalHub}${environmentName}', 260)
 var _aiProjectName = take('${abbreviations.aiPortalProject}${environmentName}', 260)
 var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
 
-var _containerRegistryName = !empty(containerRegistryName)
+  var _containerRegistryName = !empty(containerRegistryName)
   ? containerRegistryName
-  : take('${abbreviations.containerRegistryRegistries}${take(alphaNumericEnvironmentName, 35)}${resourceToken}', 50)
-var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}${resourceToken}', 24)
+  : take('${abbreviations.containerRegistryRegistries}${alphaNumericEnvironmentName}${resourceToken}', 50)
+var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}-${resourceToken}', 24)
 var _containerAppsEnvironmentName = !empty(containerAppsEnvironmentName)
   ? containerAppsEnvironmentName
   : take('${abbreviations.appManagedEnvironments}${environmentName}', 60)
@@ -399,15 +399,6 @@ module frontendIdentity './modules/app/identity.bicep' = {
   }
 }
 
-var keyvaultIdentities = withAuthentication
-  ? {
-      'microsoft-provider-authentication-secret': {
-        keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
-        identity: frontendIdentity.outputs.resourceId
-      }
-    }
-  : {}
-
 module frontendApp 'modules/app/container-apps.bicep' = {
   name: 'frontend-container-app'
   scope: resourceGroup()
@@ -432,7 +423,14 @@ module frontendApp 'modules/app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: frontendIdentity.outputs.clientId
     }
-    keyvaultIdentities: keyvaultIdentities
+    keyvaultIdentities: withAuthentication
+      ? {
+          'microsoft-provider-authentication-secret': {
+            keyVaultUrl: '${keyVault.outputs.uri}secrets/${authClientSecretName}'
+            identity: frontendIdentity.outputs.resourceId
+          }
+        }
+      : {}
   }
 }
 
