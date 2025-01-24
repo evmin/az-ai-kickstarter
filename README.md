@@ -4,7 +4,7 @@ ToC: [**USER STORY**](#user-story) \| [**GETTING STARTED**](#getting-started)  \
 
 ## User story
 
-### AZ AI Kickstarter overview
+### Azure AI App Kickstarter overview
 
 L100 level aplication stub for an AI copilot/agent.
 
@@ -14,6 +14,7 @@ L100 level aplication stub for an AI copilot/agent.
 
 This respository has been configured to support GitHub Codespace and DevContainers.
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/evmin/az-ai-kickstarter) [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/evmin/az-ai-kickstarter)
 
 > [!WARNING]
 > Do NOT `git clone` the application under Windows and then open a DevContainer. 
@@ -39,14 +40,28 @@ It is possible to work with a fully local setup.
 
 ### Quick deploy
 
-To deploy AZ AI Kickstarter just run: 
+To deploy Azure AI App Kickstarter just run: 
 ```bash
 azd up
 ``` 
 
-> [!WARNING] The application automatically configures authentication to secure frontend
-> To do so it creates an app registration in EntraID. 
-> If the account you are using to deploy the app does not have the required permissions, disable the preprovision script in azure.yaml
+> [!NOTE] On Windows you need `pwsh` available in the command line. If needed run `winget install Microsoft.PowerShell`
+> before running `azd up`
+
+#### Deploy with authentication enabled
+
+AZD can automatically configures authentication to secure frontend and/or backend. To do so execute the following command before `azd up`:
+```bash
+azd env set WITH_AUTHENTICATION true
+```
+If you already executed `azd up` just run provisioning again:
+```bash
+azd env set WITH_AUTHENTICATION true
+azd provision
+```
+
+> [!WARNING] The account executing `azd` needs to be able to create Application Registration in your Azure
+> Entra ID tenant.
 
 ## How it works
 

@@ -1,5 +1,5 @@
-metadata name = 'azai-kickstarter'
-metadata description = 'Deploys the infrastructure for AZ AI Kickstarter'
+metadata name = 'az-ai-kickstarter'
+metadata description = 'Deploys the infrastructure for Azure AI App Kickstarter'
 metadata author = 'AI GBB EMEA <eminkevich@microsoft.com>'
 
 /* -------------------------------------------------------------------------- */
@@ -104,7 +104,7 @@ var alphaNumericEnvironmentName = replace(replace(environmentName, '-', ''), ' '
 var tags = union(
   {
     'azd-env-name': environmentName
-    solution: 'azai-kickstarter'
+    solution: 'az-ai-kickstarter'
   },
   extraTags
 )
