@@ -128,7 +128,7 @@ var _storageAccountName = take(
 var _azureOpenAiName = take('${abbreviations.cognitiveServicesOpenAI}${alphaNumericEnvironmentName}${resourceToken}', 63)
 var _aiHubName = take('${abbreviations.aiPortalHub}${environmentName}', 260)
 var _aiProjectName = take('${abbreviations.aiPortalProject}${environmentName}', 260)
-var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
+// var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
 
   var _containerRegistryName = !empty(containerRegistryName)
   ? containerRegistryName
@@ -172,7 +172,7 @@ module hub 'modules/ai/hub.bicep' = {
     openAiName: azureOpenAi.outputs.name
     openAiConnectionName: 'aoai-connection'
     openAiContentSafetyConnectionName: 'aoai-content-safety-connection'
-    aiSearchName: searchService.outputs.name
+    // aiSearchName: searchService.outputs.name
     aiSearchConnectionName: 'search-service-connection'
   }
 }
@@ -254,7 +254,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
 // order of the model definitions is important
 var deployments = [
   {
-    name: 'gpt-4o-2024-08-06'
+    name: 'gpt-4o-2024-11-20'
     sku: {
       name: 'GlobalStandard'
       capacity: 50
@@ -262,7 +262,7 @@ var deployments = [
     model: {
       format: 'OpenAI'
       name: 'gpt-4o'
-      version: '2024-08-06'
+      version: '2024-11-20'
     }
     versionUpgradeOption: 'OnceCurrentVersionExpired'
   }
@@ -292,16 +292,17 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   }
 }
 
-module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
-  name: _aiSearchServiceName
-  scope: resourceGroup()
-  params: {
-    location: location
-    tags: tags
-    name: _aiSearchServiceName
-    sku: aiSearchSkuName
-  }
-}
+/* ---------------------------- Search  ------------------------------ */
+// module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
+//   name: _aiSearchServiceName
+//   scope: resourceGroup()
+//   params: {
+//     location: location
+//     tags: tags
+//     name: _aiSearchServiceName
+//     sku: aiSearchSkuName
+//   }
+// }
 
 /* ---------------------------- Observability  ------------------------------ */
 
