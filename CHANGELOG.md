@@ -14,4 +14,9 @@ Synchronised with the [AZ AI Generator](https://github.com/dbroeglin/generator-a
 - Updated backend telemetry dependencies to latest versions.
 
 ## Fixed
-- The tracing porcessing logic
+- The tracing processing logic
+
+## [0.5.1] - 2025-01-25
+
+### Added
+- Ability to reference and use externally provisioned Azure OpenAI Models

@@ -28,6 +28,18 @@
     },
     "azurePrincipalId": {
       "value": "${AZURE_PRINCIPAL_ID}"
+    },
+    "aoaiEndpointParam": {
+      "value": "${AOAI_ENDPOINT}"
+    },
+    "aoaiDeploymentNameParam": {
+      "value": "${AOAI_DEPLOYMENT_NAME}"
+    },
+    "aoaiKeyParam": {
+      "value": "${AOAI_KEY}"
+    },
+    "aoaiApiVersionParam": {
+      "value": "${AOAI_API_VERSION}"
     }
   }
 }

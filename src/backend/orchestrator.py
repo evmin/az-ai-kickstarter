@@ -18,6 +18,7 @@ from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
 from azure.ai.inference.aio import ChatCompletionsClient
 from azure.identity.aio import DefaultAzureCredential
+from azure.core.credentials import AzureKeyCredential
 from opentelemetry.trace import get_tracer
 
 from pydantic import Field
@@ -35,12 +36,15 @@ class SemanticOrchestrator:
 
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+        api_key = os.getenv("aoaikeysecret", None)
+        
+        credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
         
         gpt4o_service = AzureAIInferenceChatCompletion(
             ai_model_id="gpt-4o",
             client=ChatCompletionsClient(
                 endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name}",
-                credential=DefaultAzureCredential(),
+                credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
             ))
         
