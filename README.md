@@ -63,6 +63,17 @@ azd up
 > Optionally, if the section is too long, create a `USER_MANUAL.md` file and
 > link to it from here.
 
+### External Model
+
+If you have an external Azure OpenAI model already provisioned, you can reference it by setting environment variable prior callin `azd up`
+
+```sh
+export AOAI_ENDPOINT="https://<endpoint>.openai.azure.com"
+export AOAI_DEPLOYMENT_NAME="gpt-4o-2024-11-20"
+export AOAI_API_VERSION="2024-12-01-preview"
+export AOAI_KEY="key"
+```
+
 ### Architecture
 
 ```mermaid

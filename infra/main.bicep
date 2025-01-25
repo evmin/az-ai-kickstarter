@@ -20,6 +20,12 @@ param extraTags object = {}
 @description('Location for all resources')
 param location string = resourceGroup().location
 
+@description('Externally provided model configuration')
+param aoaiEndpointParam string = ''
+param aoaiDeploymentNameParam string = ''
+param aoaiKeyParam string = ''
+param aoaiApiVersionParam string = ''
+
 /* ---------------------------- Shared Resources ---------------------------- */
 
 @maxLength(63)
@@ -109,8 +115,6 @@ var tags = union(
   extraTags
 )
 
-@description('Azure OpenAI API Version')
-var azureOpenAiApiVersion = '2024-12-01-preview'
 
 /* --------------------- Globally Unique Resource Names --------------------- */
 
@@ -250,14 +254,13 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
   }
 }
 
-// Also rerefernced in the outputs with the sequential index
-// order of the model definitions is important
+// ------------------------
 var deployments = [
   {
     name: 'gpt-4o-2024-11-20'
     sku: {
       name: 'GlobalStandard'
-      capacity: 50
+      capacity: empty(aoaiEndpointParam) ? 50 : 1
     }
     model: {
       format: 'OpenAI'
@@ -291,6 +294,10 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
     ]
   }
 }
+
+var azureOpenAiApiVersion = empty(aoaiApiVersionParam) ? '2024-12-01-preview' : aoaiApiVersionParam
+var azureOpenAiApiEndpoint = empty(aoaiEndpointParam) ? azureOpenAi.outputs.endpoint : aoaiEndpointParam
+var azureOpenAiDeploymentName = empty(aoaiDeploymentNameParam) ? deployments[0].name : aoaiDeploymentNameParam
 
 /* ---------------------------- Search  ------------------------------ */
 // module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
@@ -483,10 +490,15 @@ module backendApp 'modules/app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: backendIdentity.outputs.clientId
 
-      AZURE_OPENAI_ENDPOINT: azureOpenAi.outputs.endpoint
-      AZURE_OPENAI_DEPLOYMENT_NAME: deployments[0].name
+      AZURE_OPENAI_ENDPOINT: azureOpenAiApiEndpoint
+      AZURE_OPENAI_DEPLOYMENT_NAME: azureOpenAiDeploymentName
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
     }
+    secrets: union(
+      {},
+      empty(aoaiKeyParam) ? {} : {
+        aoaikeysecret: aoaiKeyParam
+    })
   }
 }
 
@@ -521,15 +533,16 @@ output AZURE_PRINCIPAL_ID string = azurePrincipalId
 output AZURE_CLIENT_APP_ID string = authClientId
 
 @description('Azure OpenAI name')
-output AZURE_OPENAI_NAME string = azureOpenAi.outputs.name
+// output AZURE_OPENAI_NAME string = azureOpenAi.outputs.name
+output AZURE_OPENAI_NAME string = azureOpenAiDeploymentName
 
 @description('Azure OpenAI endpoint')
-output AZURE_OPENAI_ENDPOINT string = azureOpenAi.outputs.endpoint
+output AZURE_OPENAI_ENDPOINT string = azureOpenAiApiEndpoint
 
-@description('Azure OpenAI Core Model Deployment Name')
-output AZURE_OPENAI_DEPLOYMENT_NAME string = deployments[0].name
+@description('Azure OpenAI Model Deployment Name')
+output AZURE_OPENAI_DEPLOYMENT_NAME string = azureOpenAiDeploymentName
 
-@description('Azure OpenAI Core Model Deployment Name')
+@description('Azure OpenAI API Version')
 output AZURE_OPENAI_API_VERSION string = azureOpenAiApiVersion
 
 @description('Application Insights name')

@@ -31,10 +31,6 @@ param secrets object = {}
 
 @description('External Ingress Allowed?')
 param externalIngressAllowed bool = true
-// param applicationInsightsName string
-
-// param azureOpenAIModelEndpoint string
-// param azureModelDeploymentName string
 
 // param cosmosDbEndpoint string
 // param cosmosDbName string
@@ -63,6 +59,22 @@ module fetchLatestImage './fetch-container-image.bicep' = {
     name: name
   }
 }
+
+var environment = [
+            for key in objectKeys(env): {
+              name: key
+              value: '${env[key]}'
+            }
+          ]
+
+var secret_refs = [
+            for key in objectKeys(secrets): {
+              name: key
+              secretRef: key
+            }
+          ]
+
+var env_vars = union(environment, secret_refs)
 
 resource app 'Microsoft.App/containerApps@2024-08-02-preview' = {
   name: name
@@ -96,12 +108,7 @@ resource app 'Microsoft.App/containerApps@2024-08-02-preview' = {
         {
           image: fetchLatestImage.outputs.?containers[?0].?image ?? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           name: 'main'
-          env: [
-            for key in objectKeys(env): {
-              name: key
-              value: '${env[key]}'
-            }
-          ]
+          env: env_vars
           resources: {
             cpu: json('1.0')
             memory: '2.0Gi'
