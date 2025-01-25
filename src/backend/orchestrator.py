@@ -181,7 +181,7 @@ class SemanticOrchestrator:
                 role=AuthorRole(d.get('role')),
                 name=d.get('name'),
                 content=d.get('content')
-            ) for d in filter(lambda m: m['role'] in ("assistant", "user"), conversation_messages)
+            ) for d in filter(lambda m: m['role'] in ("system", "developer", "assistant", "user"), conversation_messages)
         ]
 
         await agent_group_chat.add_chat_messages(chat_history)
