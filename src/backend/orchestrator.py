@@ -6,7 +6,7 @@ import datetime
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents import AgentGroupChat
-# from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
@@ -22,8 +22,6 @@ from azure.core.credentials import AzureKeyCredential
 from opentelemetry.trace import get_tracer
 
 from pydantic import Field
-
-from temp_agent import CustomAgentBase
 
 class SemanticOrchestrator:
     def __init__(self):
@@ -67,8 +65,8 @@ class SemanticOrchestrator:
                                         kernel=self.kernel,
                                         definition_file_path="agents/writer.yaml")
         critic = self.create_agent(service_id="gpt-4o",
-                                            kernel=self.kernel,
-                                            definition_file_path="agents/critic.yaml")
+                                        kernel=self.kernel,
+                                        definition_file_path="agents/critic.yaml")
 
         agents=[writer, critic]
 
@@ -192,10 +190,9 @@ class SemanticOrchestrator:
 
         tracer = get_tracer(__name__)
         
-        # UNIQUE SESSION ID is a must : get the name of the provider
-        # Define current timestamp
+        # UNIQUE SESSION ID is a must
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        session_id = f"{self.resourceGroup}-{user_id}-{current_time}"
+        session_id = f"{user_id}-{current_time}"
         
         with tracer.start_as_current_span(session_id):
             # async for _ in agent_group_chat.invoke():
@@ -219,7 +216,9 @@ class SemanticOrchestrator:
         with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
             
-        return CustomAgentBase(
+        # TODO : adjust for o1
+        # o1 does not support paralel tools calling, temperture
+        return ChatCompletionAgent(
             service_id=service_id,
             kernel=kernel,
             name=definition['name'],
@@ -232,20 +231,3 @@ class SemanticOrchestrator:
             description=definition['description'],
             instructions=definition['instructions']
         )
-
-        # DO NOT DELETE. This is the original implementation of the create_agent method
-        # Once https://github.com/microsoft/semantic-kernel/issues/10174 is released, 
-        # we can switch to the below implementation
-        # return ChatCompletionAgent(
-        #     service_id=service_id,
-        #     kernel=kernel,
-        #     name=definition['name'],
-        #     execution_settings=AzureChatPromptExecutionSettings(
-        #         temperature=definition.get('temperature', 0.5),
-        #         function_choice_behavior=FunctionChoiceBehavior.Auto(
-        #             filters={"included_plugins": definition.get('included_plugins', [])}
-        #         )
-        #     ),
-        #     description=definition['description'],
-        #     instructions=definition['instructions']
-        # )

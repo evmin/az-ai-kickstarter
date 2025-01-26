@@ -106,3 +106,13 @@ This project follows below responsible AI guidelines and best practices, please 
 - [Microsoft Responsible AI Guidelines](https://www.microsoft.com/en-us/ai/responsible-ai)
 - [Responsible AI practices for Azure OpenAI models](https://learn.microsoft.com/en-us/legal/cognitive-services/openai/overview)
 - [Safety evaluations transparency notes](https://learn.microsoft.com/en-us/azure/ai-studio/concepts/safety-evaluations-transparency-note)
+
+## Acknowledgements
+
+  * Kudos to [Pamela Fox](https://github.com/pamelafox) and [James Casey](https://github.com/jamesc) for [Azure-Samples/openai-chat-app-entra-auth-builtin](https://github.com/Azure-Samples/openai-chat-app-entra-auth-builtin) from which we borrowed most of authentication & authorization setup.
+  * Special thank you to [Michael Hofer](https://github.com/mhofer1976) for extensive testing and solvng o1 compatibility
+
+## Authors
+
+  * [Dominique Broeglin](https://github.com/dbroeglin)
+  * [Evgeny Minkevich](https://github.com/evmin)

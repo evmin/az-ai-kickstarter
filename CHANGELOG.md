@@ -20,3 +20,6 @@ Synchronised with the [AZ AI Generator](https://github.com/dbroeglin/generator-a
 
 ### Added
 - Ability to reference and use externally provisioned Azure OpenAI Models
+
+### Changed
+- Switched back to the SK chat completeion client as it now provides accurate agent names in tracing
