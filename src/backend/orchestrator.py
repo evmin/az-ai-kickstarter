@@ -20,10 +20,16 @@ from azure.ai.inference.aio import ChatCompletionsClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials import AzureKeyCredential
 from opentelemetry.trace import get_tracer
+from enum import Enum
 
 from pydantic import Field
 
 class SemanticOrchestrator:
+    
+    class MODEL_TYPE(Enum):
+        OTHER = "other"
+        O1 = "o1"
+    
     def __init__(self):
 
         self.logger = logging.getLogger(__name__)
@@ -52,7 +58,11 @@ class SemanticOrchestrator:
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
         
+        # Utility Execution Settings: speaker selector, terminator
+        self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o", temperature=0)
+        
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
+        
 
     # --------------------------------------------
     # Create Agent Group Chat
@@ -72,7 +82,6 @@ class SemanticOrchestrator:
 
         agent_group_chat = AgentGroupChat(
                 agents=agents,
-                
                 selection_strategy=self.create_selection_strategy(agents, critic),
                 termination_strategy = self.create_termination_strategy(
                                          agents=[critic],
@@ -86,9 +95,11 @@ class SemanticOrchestrator:
     def create_selection_strategy(self, agents, default_agent):
         """Speaker selection strategy for the agent group chat."""
         definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
+        # settings = AzureChatPromptExecutionSettings(temperature=0,service_id="gpt-4o")
+        
         selection_function = KernelFunctionFromPrompt(
                 function_name="SpeakerSelector",
-                prompt_execution_settings=AzureChatPromptExecutionSettings( temperature=0),
+                prompt_execution_settings=self.utility_settings,
                 prompt=fr"""
                     You are the next speaker selector.
 
@@ -141,7 +152,7 @@ class SemanticOrchestrator:
             
             termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
                 function_name="TerminationEvaluator",
-                prompt_execution_settings=AzureChatPromptExecutionSettings(temperature=0),
+                prompt_execution_settings=self.utility_settings,
                 prompt=fr"""
                     You are a data extraction assistant.
                     Check the provided evaluation and return the evalutation score.
@@ -177,7 +188,7 @@ class SemanticOrchestrator:
     async def process_conversation(self, user_id, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
 
-        # Load chat history - allow only assistant and user messages
+        # Load chat history
         chat_history = [
             ChatMessageContent(
                 role=AuthorRole(d.get('role')),
@@ -202,32 +213,52 @@ class SemanticOrchestrator:
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
-        # Writer response, as we run termination evaluation on Critic only, so expecting Critic response to be the last
-        # TO be reimplemented with a semantic function
-        reply = response[-2].to_dict()
+        # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
+        reply = [r for r in response if r.name == "Writer"][-1].to_dict()
+        
+        print("-------------------------------------------------")
+        print( reply)
+        print("-------------------------------------------------")
 
         return reply
 
     # --------------------------------------------
     # UTILITY - CREATES an agent based on YAML definition
     # --------------------------------------------
-    def create_agent(self, kernel, service_id, definition_file_path):
+    def create_agent(self, kernel, service_id, definition_file_path, model_type: MODEL_TYPE = None):
+        
+        
+        if model_type is None:
+            model_type = self.MODEL_TYPE.OTHER  # Default to Enumerator.OTHER
+        elif not isinstance(model_type, self.MODEL_TYPE):
+            raise ValueError(f"Invalid enumerator value: {model_type}")
 
         with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
             
-        # TODO : adjust for o1
         # o1 does not support paralel tools calling, temperture
-        return ChatCompletionAgent(
-            service_id=service_id,
-            kernel=kernel,
-            name=definition['name'],
-            execution_settings=AzureChatPromptExecutionSettings(
+        if model_type == self.MODEL_TYPE.O1:
+            settings = AzureChatPromptExecutionSettings(
+                parallel_tool_calls=False,
+                function_choice_behavior=FunctionChoiceBehavior.Auto(
+                    filters={"included_plugins": definition.get('included_plugins', [])}
+                )
+            )
+        else:
+            settings = AzureChatPromptExecutionSettings(
                 temperature=definition.get('temperature', 0.5),
                 function_choice_behavior=FunctionChoiceBehavior.Auto(
                     filters={"included_plugins": definition.get('included_plugins', [])}
                 )
-            ),
+            )
+            
+        agent = ChatCompletionAgent(
+            service_id=service_id,
+            kernel=kernel,
+            name=definition['name'],
+            execution_settings=settings,
             description=definition['description'],
             instructions=definition['instructions']
         )
+        
+        return agent

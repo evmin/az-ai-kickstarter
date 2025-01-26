@@ -71,8 +71,10 @@ If you have an external Azure OpenAI model already provisioned, you can referenc
 export AOAI_ENDPOINT="https://<endpoint>.openai.azure.com"
 export AOAI_DEPLOYMENT_NAME="gpt-4o-2024-11-20"
 export AOAI_API_VERSION="2024-12-01-preview"
-export AOAI_KEY="key"
+export aoaikeysecret="key"
 ```
+
+**OBS!** The `aoaikeysecret` is not set in azd .azure/<env>./.env file automatically. In order to use it when running the model locally, either manually set it as env variable or add it to azd `.env` file.
 
 ### Architecture
 

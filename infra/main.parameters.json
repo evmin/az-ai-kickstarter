@@ -36,7 +36,7 @@
       "value": "${AOAI_DEPLOYMENT_NAME}"
     },
     "aoaiKeyParam": {
-      "value": "${AOAI_KEY}"
+      "value": "${aoaikeysecret}"
     },
     "aoaiApiVersionParam": {
       "value": "${AOAI_API_VERSION}"
