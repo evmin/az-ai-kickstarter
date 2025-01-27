@@ -74,7 +74,8 @@ export AOAI_API_VERSION="2024-12-01-preview"
 export aoaikeysecret="key"
 ```
 
-**OBS!** The `aoaikeysecret` is not set in azd .azure/<env>./.env file automatically. In order to use it when running the model locally, either manually set it as env variable or add it to azd `.env` file.
+>[WARNING!] The `aoaikeysecret` is not set in azd .azure/<env>./.env file automatically. 
+> In order to use it when running the model locally, either set it as env variable or add it to azd `.env` file.
 
 ### Architecture
 
