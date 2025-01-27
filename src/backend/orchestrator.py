@@ -44,6 +44,11 @@ class SemanticOrchestrator:
         
         credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
         
+        print("-------------------------------------------------")
+        print( endpoint)
+        print( deployment_name)
+        print("-------------------------------------------------")
+        
         gpt4o_service = AzureAIInferenceChatCompletion(
             ai_model_id="gpt-4o",
             client=ChatCompletionsClient(
@@ -59,7 +64,8 @@ class SemanticOrchestrator:
             ])
         
         # Utility Execution Settings: speaker selector, terminator
-        self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o", temperature=0)
+        # self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o", temperature=0)
+        self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o")
         
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
         
@@ -73,9 +79,11 @@ class SemanticOrchestrator:
 
         writer = self.create_agent(service_id="gpt-4o",
                                         kernel=self.kernel,
+                                        model_type=self.MODEL_TYPE.O1,
                                         definition_file_path="agents/writer.yaml")
         critic = self.create_agent(service_id="gpt-4o",
                                         kernel=self.kernel,
+                                        model_type=self.MODEL_TYPE.O1,
                                         definition_file_path="agents/critic.yaml")
 
         agents=[writer, critic]

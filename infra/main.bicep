@@ -255,21 +255,38 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
 }
 
 // ------------------------
+// var deployments = [
+//   {
+//     name: 'gpt-4o-2024-11-20'
+//     sku: {
+//       name: 'GlobalStandard'
+//       capacity: empty(aoaiEndpointParam) ? 50 : 1
+//     }
+//     model: {
+//       format: 'OpenAI'
+//       name: 'gpt-4o'
+//       version: '2024-11-20'
+//     }
+//     versionUpgradeOption: 'OnceCurrentVersionExpired'
+//   }
+// ]
+
 var deployments = [
   {
-    name: 'gpt-4o-2024-11-20'
+    name: 'o1-mini-2024-09-12'
     sku: {
       name: 'GlobalStandard'
-      capacity: empty(aoaiEndpointParam) ? 50 : 1
+      capacity: 5
     }
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-11-20'
+      name: 'o1-mini'
+      version: '2024-09-12'
     }
     versionUpgradeOption: 'OnceCurrentVersionExpired'
   }
 ]
+
 
 module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   name: 'cognitiveServices'
@@ -291,6 +308,7 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
         roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
         principalId: azurePrincipalId
       }
+
     ]
   }
 }
