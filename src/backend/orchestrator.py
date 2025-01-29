@@ -11,24 +11,24 @@ from semantic_kernel.agents.strategies.termination.termination_strategy import T
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
-from azure.ai.inference.aio import ChatCompletionsClient
-from azure.identity.aio import DefaultAzureCredential
-from azure.core.credentials import AzureKeyCredential
+
+from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
+# from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+# from azure.ai.inference.aio import ChatCompletionsClient
+# from azure.identity.aio import DefaultAzureCredential
+# from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
 from opentelemetry.trace import get_tracer
-from enum import Enum
 
 from pydantic import Field
 
 class SemanticOrchestrator:
-    
-    class MODEL_TYPE(Enum):
-        OTHER = "other"
-        O1 = "o1"
     
     def __init__(self):
 
@@ -40,21 +40,41 @@ class SemanticOrchestrator:
 
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION")
         api_key = os.getenv("aoaikeysecret", None)
         
-        credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
+        # Not used - waiting for the fix with o1
+        # credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
+        # inference_service = AzureAIInferenceChatCompletion(
+        #     ai_model_id="o1-mini",
+        #     service_id="SERVICE_MODEL",
+        #     instruction_role="developer",
+        #     client=ChatCompletionsClient(
+        #         endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name}",
+        #         credential=credential,
+        #         credential_scopes=["https://cognitiveservices.azure.com/.default"],
+        #     ))
         
-        inference_service = AzureAIInferenceChatCompletion(
-            ai_model_id="o1-mini",
-            service_id="SERVICE_MODEL",
-            client=ChatCompletionsClient(
-                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name}",
-                credential=credential,
-                credential_scopes=["https://cognitiveservices.azure.com/.default"],
-            ))
+        if (api_key):
+            inference_srv = AzureChatCompletion(
+                service_id="SERVICE_MODEL",
+                instruction_role="developer",
+                endpoint=endpoint,
+                deployment_name=deployment_name,
+                api_version=api_version,
+                api_key=api_key)
+        else:
+            inference_srv = AzureChatCompletion(
+                service_id="SERVICE_MODEL",
+                instruction_role="developer",
+                endpoint=endpoint,
+                deployment_name=deployment_name,
+                api_version=api_version,
+                ad_token_provider=get_bearer_token_provider(DefaultAzureCredential(),"https://cognitiveservices.azure.com/.default"))
         
         self.kernel = Kernel(
-            services=[inference_service],
+            # services=[inference_service],
+            services=[inference_srv],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
@@ -225,12 +245,12 @@ class SemanticOrchestrator:
     # --------------------------------------------
     def create_agent(self, kernel, service_id, definition_file_path):
         
-        model_id = kernel.get_service(service_id=service_id).ai_model_id
+        # model_id = kernel.get_service(service_id=service_id).ai_model_id
             
         with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
             
-        if model_id.lower().startswith("o1"):
+        # if model_id.lower().startswith("o1"):
             settings = AzureChatPromptExecutionSettings(
                 service_id=service_id,
                 parallel_tool_calls=False,
@@ -238,13 +258,13 @@ class SemanticOrchestrator:
                     filters={"included_plugins": definition.get('included_plugins', [])}
                 )
             )
-        else:
-            settings = AzureChatPromptExecutionSettings(
-                temperature=definition.get('temperature', 0.5),
-                function_choice_behavior=FunctionChoiceBehavior.Auto(
-                    filters={"included_plugins": definition.get('included_plugins', [])}
-                )
-            )
+        # else:
+        #     settings = AzureChatPromptExecutionSettings(
+        #         temperature=definition.get('temperature', 0.5),
+        #         function_choice_behavior=FunctionChoiceBehavior.Auto(
+        #             filters={"included_plugins": definition.get('included_plugins', [])}
+        #         )
+        #     )
             
         agent = ChatCompletionAgent(
             service_id=service_id,
