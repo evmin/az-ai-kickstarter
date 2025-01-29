@@ -44,13 +44,9 @@ class SemanticOrchestrator:
         
         credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
         
-        print("-------------------------------------------------")
-        print( endpoint)
-        print( deployment_name)
-        print("-------------------------------------------------")
-        
-        gpt4o_service = AzureAIInferenceChatCompletion(
-            ai_model_id="gpt-4o",
+        inference_service = AzureAIInferenceChatCompletion(
+            ai_model_id="o1-mini",
+            service_id="SERVICE_MODEL",
             client=ChatCompletionsClient(
                 endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name}",
                 credential=credential,
@@ -58,14 +54,14 @@ class SemanticOrchestrator:
             ))
         
         self.kernel = Kernel(
-            services=[gpt4o_service],
+            services=[inference_service],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
         
         # Utility Execution Settings: speaker selector, terminator
-        # self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o", temperature=0)
-        self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o")
+        # self.utility_settings = AzureChatPromptExecutionSettings(service_id="SERVICE_MODEL", temperature=0)
+        self.utility_settings = AzureChatPromptExecutionSettings(service_id="SERVICE_MODEL")
         
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
         
@@ -77,13 +73,11 @@ class SemanticOrchestrator:
 
         self.logger.debug("Creating chat")
 
-        writer = self.create_agent(service_id="gpt-4o",
+        writer = self.create_agent(service_id="SERVICE_MODEL",
                                         kernel=self.kernel,
-                                        model_type=self.MODEL_TYPE.O1,
                                         definition_file_path="agents/writer.yaml")
-        critic = self.create_agent(service_id="gpt-4o",
+        critic = self.create_agent(service_id="SERVICE_MODEL",
                                         kernel=self.kernel,
-                                        model_type=self.MODEL_TYPE.O1,
                                         definition_file_path="agents/critic.yaml")
 
         agents=[writer, critic]
@@ -195,14 +189,14 @@ class SemanticOrchestrator:
 
     async def process_conversation(self, user_id, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
-
+       
         # Load chat history
         chat_history = [
             ChatMessageContent(
                 role=AuthorRole(d.get('role')),
                 name=d.get('name'),
                 content=d.get('content')
-            ) for d in filter(lambda m: m['role'] in ("system", "developer", "assistant", "user"), conversation_messages)
+            ) for d in filter(lambda m: m['role'] in ("assistant", "user"), conversation_messages)
         ]
 
         await agent_group_chat.add_chat_messages(chat_history)
@@ -224,29 +218,21 @@ class SemanticOrchestrator:
         # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
-        print("-------------------------------------------------")
-        print( reply)
-        print("-------------------------------------------------")
-
         return reply
 
     # --------------------------------------------
     # UTILITY - CREATES an agent based on YAML definition
     # --------------------------------------------
-    def create_agent(self, kernel, service_id, definition_file_path, model_type: MODEL_TYPE = None):
+    def create_agent(self, kernel, service_id, definition_file_path):
         
-        
-        if model_type is None:
-            model_type = self.MODEL_TYPE.OTHER  # Default to Enumerator.OTHER
-        elif not isinstance(model_type, self.MODEL_TYPE):
-            raise ValueError(f"Invalid enumerator value: {model_type}")
-
+        model_id = kernel.get_service(service_id=service_id).ai_model_id
+            
         with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
             
-        # o1 does not support paralel tools calling, temperture
-        if model_type == self.MODEL_TYPE.O1:
+        if model_id.lower().startswith("o1"):
             settings = AzureChatPromptExecutionSettings(
+                service_id=service_id,
                 parallel_tool_calls=False,
                 function_choice_behavior=FunctionChoiceBehavior.Auto(
                     filters={"included_plugins": definition.get('included_plugins', [])}
@@ -263,8 +249,8 @@ class SemanticOrchestrator:
         agent = ChatCompletionAgent(
             service_id=service_id,
             kernel=kernel,
+            arguments=KernelArguments(settings=settings),
             name=definition['name'],
-            execution_settings=settings,
             description=definition['description'],
             instructions=definition['instructions']
         )
