@@ -135,28 +135,22 @@ def set_up_logging():
 # --------------------------------------------
 # UTILITY - CREATES an agent based on YAML definition
 # --------------------------------------------
-def create_agent_from_yaml(kernel, service_id, definition_file_path, service_role=None):
+def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_effort=None):
         
-        # model_id = kernel.get_service(service_id=service_id).ai_model_id
         with open(definition_file_path, 'r', encoding='utf-8') as file:
             definition = yaml.safe_load(file)
             
-        service_role = service_role if service_role else service_id
-        if service_role.lower()=="planner":
-            settings = AzureChatPromptExecutionSettings(
-                service_id=service_id,
-                parallel_tool_calls=False,
-                function_choice_behavior=FunctionChoiceBehavior.Auto(
-                    filters={"included_plugins": definition.get('included_plugins', [])}
-                )
-            )
-        else:
-            settings = AzureChatPromptExecutionSettings(
+        settings = AzureChatPromptExecutionSettings(
                 temperature=definition.get('temperature', 0.5),
                 function_choice_behavior=FunctionChoiceBehavior.Auto(
                     filters={"included_plugins": definition.get('included_plugins', [])}
-                )
-            )
+                ))
+    
+        # Resoning model specifics
+        model_id = kernel.get_service(service_id=service_id).ai_model_id
+        if model_id.lower().startswith("o"):
+            settings.temperature = None
+            settings.reasoning_effort = reasoning_effort
             
         agent = ChatCompletionAgent(
             service_id=service_id,

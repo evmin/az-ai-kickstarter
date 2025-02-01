@@ -5,23 +5,18 @@ import datetime
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents import AgentGroupChat
-from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
 
-from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
 from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 from azure.ai.inference.aio import ChatCompletionsClient
 from azure.identity.aio import DefaultAzureCredential
-from azure.core.credentials import AzureKeyCredential
-# from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 from opentelemetry.trace import get_tracer
 
@@ -51,18 +46,29 @@ class DebateOrchestrator:
             service_id="executor",
             client=ChatCompletionsClient(
                 endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_executor}",
+                api_version=api_version,
+                credential=credential,
+                credential_scopes=["https://cognitiveservices.azure.com/.default"],
+            ))
+        
+        utility_service = AzureAIInferenceChatCompletion(
+            ai_model_id="utility",
+            service_id="utility",
+            client=ChatCompletionsClient(
+                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_utility}",
+                api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
             ))
         
         self.kernel = Kernel(
-            services=[executor_service],
+            services=[executor_service, utility_service],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
         
         self.settings_executor = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
-        self.settings_utility = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
+        self.settings_utility = AzureChatPromptExecutionSettings(service_id="utility", temperature=0)
         
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
         
@@ -74,8 +80,6 @@ class DebateOrchestrator:
 
         self.logger.debug("Creating chat")
         
-        self.settings_executor = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
-
         writer = create_agent_from_yaml(service_id="executor",
                                         kernel=self.kernel,
                                         definition_file_path="agents/writer.yaml")
@@ -96,13 +100,14 @@ class DebateOrchestrator:
     # --------------------------------------------
     # Speaker Selection Strategy
     # --------------------------------------------
+    # Using executor model since we need to process context - cognitive task
     def create_selection_strategy(self, agents, default_agent):
         """Speaker selection strategy for the agent group chat."""
         definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
         
         selection_function = KernelFunctionFromPrompt(
                 function_name="SpeakerSelector",
-                prompt_execution_settings=self.settings_utility,
+                prompt_execution_settings=self.settings_executor,
                 prompt=fr"""
                     You are the next speaker selector.
 
@@ -147,6 +152,7 @@ class DebateOrchestrator:
             maximum_iterations: Maximum number of iterations before termination
         """
 
+        # Using UTILITY model - the task is simple - evaluation score extraction
         class CompletionTerminationStrategy(TerminationStrategy):
             logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
             
