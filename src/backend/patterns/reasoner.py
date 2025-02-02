@@ -17,18 +17,18 @@ from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, Ke
 from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 from azure.ai.inference.aio import ChatCompletionsClient
 from azure.identity.aio import DefaultAzureCredential
+from azure.core.credentials import AzureKeyCredential
 
 from opentelemetry.trace import get_tracer
+
+# from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
 
 from pydantic import Field
 from utils.util import create_agent_from_yaml
 
-
-# This patetrn demonstrates how a debate between equally skilled models
-# can deliver an outcome that exceeds the capability of the model if 
-# the task is handled as a single request-response in its entirety. 
-# We focus each agent on the subset of the whole task and thus get better results.
-class DebateOrchestrator:
+# This patetrn demonostrates how to use externally provided o3 family model as a executor
+# IS NOT COMPATIBLE with o1-mini and o1-preview models
+class ReasonerOrchestrator:
     
     def __init__(self):
 
@@ -36,16 +36,13 @@ class DebateOrchestrator:
         self.logger.setLevel(logging.INFO)
         self.logger.info("Semantic Orchestrator Handler init")
 
-        self.logger.info("Creating - %s", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"))
-
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
         deployment_name_executor = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR")
         deployment_name_utility = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY")
         
-        # planner_api_key = os.getenv("aoaikeysecret", None)
+        credential  = DefaultAzureCredential()
         
-        credential = DefaultAzureCredential()
         executor_service = AzureAIInferenceChatCompletion(
             ai_model_id="executor",
             service_id="executor",
@@ -66,8 +63,27 @@ class DebateOrchestrator:
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
             ))
         
+        planner_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT_PLANNER")
+        planner_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER")
+        planner_api_version = os.getenv("AZURE_OPENAI_API_VERSION_PLANNER")
+        planner_api_key = os.getenv("plannerkeysecret", None)
+        
+        print(f"planner_endpoint: {planner_endpoint}")
+        print(f"planner_deployment_name: {planner_deployment_name}")
+        
+        planner_credential = AzureKeyCredential(planner_api_key) if planner_api_key else DefaultAzureCredential()
+        planner_service = AzureAIInferenceChatCompletion(
+            ai_model_id="o3-mini",
+            service_id="planner",
+            client=ChatCompletionsClient(
+                endpoint=f"{str(planner_endpoint).strip('/')}/openai/deployments/{planner_deployment_name}",
+                api_version=planner_api_version,
+                credential=planner_credential,
+                credential_scopes=["https://cognitiveservices.azure.com/.default"],
+            ))
+        
         self.kernel = Kernel(
-            services=[executor_service, utility_service],
+            services=[executor_service, utility_service, planner_service],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
@@ -85,11 +101,12 @@ class DebateOrchestrator:
 
         self.logger.debug("Creating chat")
         
-        writer = create_agent_from_yaml(service_id="executor",
+        writer = create_agent_from_yaml(service_id="planner",
                                         kernel=self.kernel,
                                         definition_file_path="agents/writer.yaml")
-        critic = create_agent_from_yaml(service_id="executor",
+        critic = create_agent_from_yaml(service_id="planner",
                                         kernel=self.kernel,
+                                        reasoning_effort="low",
                                         definition_file_path="agents/critic.yaml")
         agents=[writer, critic]
 

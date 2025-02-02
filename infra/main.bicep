@@ -264,7 +264,6 @@ var deployments = [
     name: 'gpt-4o-2024-11-20'
     sku: {
       name: 'GlobalStandard'
-      // capacity: empty(aoaiEndpointParam) ? 50 : 1
       capacity: 50
     }
     model: {
@@ -287,6 +286,19 @@ var deployments = [
     }
     versionUpgradeOption: 'OnceCurrentVersionExpired'
   }
+  // {
+  //   name: 'o3-mini-2025-01-31'
+  //   sku: {
+  //     name: 'GlobalStandard'
+  //     capacity: 50
+  //   }
+  //   model: {
+  //     format: 'OpenAI'
+  //     name: 'o3-mini'
+  //     version: '2025-01-31'
+  //   }
+  //   versionUpgradeOption: 'OnceCurrentVersionExpired'
+  // }
 ]
 
 
@@ -599,3 +611,5 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outpu
 
 @description('Semantic Kernel Diagnostics')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true
+@description('Semantic Kernel Diagnostics : if set, content of the messages is traced. Set to false for production')
+output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE bool = true
