@@ -13,4 +13,6 @@ uv sync
 uvicorn app:app
 ```
 
-**OBS!** Environment variables will be read from the AZD env file: $project/.azure/<selected_azd_environment>/.env automatically
+> [INFO!] Environment variables will be read from the AZD env file: `$project/.azure/<selected_azd_environment>/.env` automatically
+
+> [WARNING!] Planner environment variables are incompaible with o1-prevew or o1-mini models

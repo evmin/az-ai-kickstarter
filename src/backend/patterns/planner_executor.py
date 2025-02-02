@@ -1,34 +1,32 @@
 import os
 import logging
 from typing import ClassVar
-import yaml
 import datetime
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents import AgentGroupChat
-from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
+
+from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 from azure.ai.inference.aio import ChatCompletionsClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials import AzureKeyCredential
+
 from opentelemetry.trace import get_tracer
-from enum import Enum
+
+# from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
 
 from pydantic import Field
+from utils.util import create_agent_from_yaml
 
-class SemanticOrchestrator:
-    
-    class MODEL_TYPE(Enum):
-        OTHER = "other"
-        O1 = "o1"
+class PlannerOrchestrator:
     
     def __init__(self):
 
@@ -36,30 +34,60 @@ class SemanticOrchestrator:
         self.logger.setLevel(logging.INFO)
         self.logger.info("Semantic Orchestrator Handler init")
 
-        self.logger.info("Creating - %s", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"))
-
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
-        api_key = os.getenv("aoaikeysecret", None)
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+        deployment_name_executor = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR")
+        deployment_name_utility = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY")
         
-        credential = AzureKeyCredential(api_key) if api_key else DefaultAzureCredential()
+        credential  = DefaultAzureCredential()
         
-        gpt4o_service = AzureAIInferenceChatCompletion(
-            ai_model_id="gpt-4o",
+        executor_service = AzureAIInferenceChatCompletion(
+            ai_model_id="executor",
+            service_id="executor",
             client=ChatCompletionsClient(
-                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name}",
+                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_executor}",
+                api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
             ))
         
+        utility_service = AzureAIInferenceChatCompletion(
+            ai_model_id="utility",
+            service_id="utility",
+            client=ChatCompletionsClient(
+                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_utility}",
+                api_version=api_version,
+                credential=credential,
+                credential_scopes=["https://cognitiveservices.azure.com/.default"],
+            ))
+        
+        planner_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT_PLANNER")
+        planner_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER")
+        planner_api_version = os.getenv("AZURE_OPENAI_API_VERSION_PLANNER")
+        planner_api_key = os.getenv("plannerkeysecret", None)
+        
+        print(f"planner_endpoint: {planner_endpoint}")
+        print(f"planner_deployment_name: {planner_deployment_name}")
+        
+        planner_credential = AzureKeyCredential(planner_api_key) if planner_api_key else DefaultAzureCredential()
+        planner_service = AzureAIInferenceChatCompletion(
+            ai_model_id="o3-mini",
+            service_id="planner",
+            client=ChatCompletionsClient(
+                endpoint=f"{str(planner_endpoint).strip('/')}/openai/deployments/{planner_deployment_name}",
+                api_version=planner_api_version,
+                credential=planner_credential,
+                credential_scopes=["https://cognitiveservices.azure.com/.default"],
+            ))
+        
         self.kernel = Kernel(
-            services=[gpt4o_service],
+            services=[executor_service, utility_service, planner_service],
             plugins=[
                 KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
             ])
         
-        # Utility Execution Settings: speaker selector, terminator
-        self.utility_settings = AzureChatPromptExecutionSettings(service_id="gpt-4o", temperature=0)
+        self.settings_executor = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
+        self.settings_utility = AzureChatPromptExecutionSettings(service_id="utility", temperature=0)
         
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
         
@@ -70,14 +98,15 @@ class SemanticOrchestrator:
     def create_agent_group_chat(self):
 
         self.logger.debug("Creating chat")
-
-        writer = self.create_agent(service_id="gpt-4o",
+        
+        writer = create_agent_from_yaml(service_id="planner",
                                         kernel=self.kernel,
                                         definition_file_path="agents/writer.yaml")
-        critic = self.create_agent(service_id="gpt-4o",
+        
+        critic = create_agent_from_yaml(service_id="planner",
                                         kernel=self.kernel,
+                                        reasoning_effort="low",
                                         definition_file_path="agents/critic.yaml")
-
         agents=[writer, critic]
 
         agent_group_chat = AgentGroupChat(
@@ -92,14 +121,14 @@ class SemanticOrchestrator:
     # --------------------------------------------
     # Speaker Selection Strategy
     # --------------------------------------------
+    # Using executor model since we need to process context - cognitive task
     def create_selection_strategy(self, agents, default_agent):
         """Speaker selection strategy for the agent group chat."""
         definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
-        # settings = AzureChatPromptExecutionSettings(temperature=0,service_id="gpt-4o")
         
         selection_function = KernelFunctionFromPrompt(
                 function_name="SpeakerSelector",
-                prompt_execution_settings=self.utility_settings,
+                prompt_execution_settings=self.settings_executor,
                 prompt=fr"""
                     You are the next speaker selector.
 
@@ -144,6 +173,7 @@ class SemanticOrchestrator:
             maximum_iterations: Maximum number of iterations before termination
         """
 
+        # Using UTILITY model - the task is simple - evaluation score extraction
         class CompletionTerminationStrategy(TerminationStrategy):
             logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
             
@@ -152,7 +182,7 @@ class SemanticOrchestrator:
             
             termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
                 function_name="TerminationEvaluator",
-                prompt_execution_settings=self.utility_settings,
+                prompt_execution_settings=self.settings_utility,
                 prompt=fr"""
                     You are a data extraction assistant.
                     Check the provided evaluation and return the evalutation score.
@@ -187,14 +217,14 @@ class SemanticOrchestrator:
 
     async def process_conversation(self, user_id, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
-
+       
         # Load chat history
         chat_history = [
             ChatMessageContent(
                 role=AuthorRole(d.get('role')),
                 name=d.get('name'),
                 content=d.get('content')
-            ) for d in filter(lambda m: m['role'] in ("system", "developer", "assistant", "user"), conversation_messages)
+            ) for d in filter(lambda m: m['role'] in ("assistant", "user"), conversation_messages)
         ]
 
         await agent_group_chat.add_chat_messages(chat_history)
@@ -216,49 +246,4 @@ class SemanticOrchestrator:
         # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
-        print("-------------------------------------------------")
-        print( reply)
-        print("-------------------------------------------------")
-
         return reply
-
-    # --------------------------------------------
-    # UTILITY - CREATES an agent based on YAML definition
-    # --------------------------------------------
-    def create_agent(self, kernel, service_id, definition_file_path, model_type: MODEL_TYPE = None):
-        
-        
-        if model_type is None:
-            model_type = self.MODEL_TYPE.OTHER  # Default to Enumerator.OTHER
-        elif not isinstance(model_type, self.MODEL_TYPE):
-            raise ValueError(f"Invalid enumerator value: {model_type}")
-
-        with open(definition_file_path, 'r', encoding='utf-8') as file:
-            definition = yaml.safe_load(file)
-            
-        # o1 does not support paralel tools calling, temperture
-        if model_type == self.MODEL_TYPE.O1:
-            settings = AzureChatPromptExecutionSettings(
-                parallel_tool_calls=False,
-                function_choice_behavior=FunctionChoiceBehavior.Auto(
-                    filters={"included_plugins": definition.get('included_plugins', [])}
-                )
-            )
-        else:
-            settings = AzureChatPromptExecutionSettings(
-                temperature=definition.get('temperature', 0.5),
-                function_choice_behavior=FunctionChoiceBehavior.Auto(
-                    filters={"included_plugins": definition.get('included_plugins', [])}
-                )
-            )
-            
-        agent = ChatCompletionAgent(
-            service_id=service_id,
-            kernel=kernel,
-            name=definition['name'],
-            execution_settings=settings,
-            description=definition['description'],
-            instructions=definition['instructions']
-        )
-        
-        return agent

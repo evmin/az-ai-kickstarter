@@ -29,17 +29,17 @@
     "azurePrincipalId": {
       "value": "${AZURE_PRINCIPAL_ID}"
     },
-    "aoaiEndpointParam": {
-      "value": "${AOAI_ENDPOINT}"
+    "plannerEndpointParam": {
+      "value": "${AZURE_OPENAI_ENDPOINT_PLANNER}"
     },
-    "aoaiDeploymentNameParam": {
-      "value": "${AOAI_DEPLOYMENT_NAME}"
+    "plannerDeploymentNameParam": {
+      "value": "${AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER}"
     },
-    "aoaiKeyParam": {
-      "value": "${aoaikeysecret}"
+    "plannerKeyParam": {
+      "value": "${plannerkeysecret}"
     },
-    "aoaiApiVersionParam": {
-      "value": "${AOAI_API_VERSION}"
+    "plannerApiVersionParam": {
+      "value": "${AZURE_OPENAI_API_VERSION_PLANNER}"
     }
   }
 }
