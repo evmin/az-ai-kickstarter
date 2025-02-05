@@ -30,16 +30,16 @@
       "value": "${AZURE_PRINCIPAL_ID}"
     },
     "plannerEndpointParam": {
-      "value": "${AZURE_OPENAI_ENDPOINT_PLANNER}"
+      "value": "${PLANNER_AZURE_OPENAI_ENDPOINT}"
     },
     "plannerDeploymentNameParam": {
-      "value": "${AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER}"
+      "value": "${PLANNER_AZURE_OPENAI_DEPLOYMENT_NAME}"
     },
     "plannerKeyParam": {
       "value": "${plannerkeysecret}"
     },
     "plannerApiVersionParam": {
-      "value": "${AZURE_OPENAI_API_VERSION_PLANNER}"
+      "value": "${PLANNER_AZURE_OPENAI_API_VERSION}"
     }
   }
 }

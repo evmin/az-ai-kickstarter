@@ -330,12 +330,12 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
 var azureOpenAiApiVersion = '2024-12-01-preview'
 
 var azureOpenAiApiEndpoint = azureOpenAi.outputs.endpoint
-var azureOpenAiDeploymentNameExecutor = deployments[0].name 
-var azureOpenAiDeploymentNameUtility =  deployments[1].name 
+var executorAzureOpenAiDeploymentName = deployments[0].name 
+var utilityAzureOpenAiDeploymentName =  deployments[1].name 
 
-var azureOpenAiApiVersionPlanner = empty(plannerApiVersionParam) ? '2024-12-01-preview' : plannerApiVersionParam
-var azureOpenAiApiEndpointPlanner = empty(plannerEndpointParam) ? azureOpenAi.outputs.endpoint : plannerEndpointParam
-var azureOpenAiDeploymentNamePlanner = empty(plannerDeploymentNameParam) ? deployments[0].name : plannerDeploymentNameParam
+var plannerAzureOpenAiApiVersion = empty(plannerApiVersionParam) ? '2024-12-01-preview' : plannerApiVersionParam
+var plannerAzureOpenAiApiEndpoint = empty(plannerEndpointParam) ? azureOpenAi.outputs.endpoint : plannerEndpointParam
+var plannerAzureOpenAiDeploymentName = empty(plannerDeploymentNameParam) ? deployments[0].name : plannerDeploymentNameParam
 
 /* ---------------------------- Search  ------------------------------ */
 // module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
@@ -530,12 +530,12 @@ module backendApp 'modules/app/container-apps.bicep' = {
 
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
       AZURE_OPENAI_ENDPOINT: azureOpenAiApiEndpoint
-      AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR: azureOpenAiDeploymentNameExecutor
-      AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY: azureOpenAiDeploymentNameUtility
+      EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME: executorAzureOpenAiDeploymentName
+      UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME: utilityAzureOpenAiDeploymentName
 
-      AZURE_OPENAI_ENDPOINT_PLANNER: azureOpenAiApiEndpointPlanner
-      AZURE_OPENAI_API_VERSION_PLANNER: azureOpenAiApiVersionPlanner
-      AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER: azureOpenAiDeploymentNamePlanner
+      PLANNER_AZURE_OPENAI_ENDPOINT: plannerAzureOpenAiApiEndpoint
+      PLANNER_AZURE_OPENAI_API_VERSION: plannerAzureOpenAiApiVersion
+      PLANNER_AZURE_OPENAI_DEPLOYMENT_NAME: plannerAzureOpenAiDeploymentName
     }
     secrets: union(
       {},
@@ -583,19 +583,19 @@ output AZURE_OPENAI_ENDPOINT string = azureOpenAiApiEndpoint
 output AZURE_OPENAI_API_VERSION string = azureOpenAiApiVersion
 
 @description('Azure OpenAI Model Deployment Name - Executor Service')
-output AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR string = azureOpenAiDeploymentNameExecutor
+output EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME string = executorAzureOpenAiDeploymentName
 
 @description('Azure OpenAI Model Deployment Name - Utility Service')
-output AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY string = azureOpenAiDeploymentNameUtility
+output UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME string = utilityAzureOpenAiDeploymentName
 
 @description('Azure OpenAI Model Deployment Name: Planner')
-output AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER string = azureOpenAiDeploymentNamePlanner
+output PLANNER_AZURE_OPENAI_DEPLOYMENT_NAME string = plannerAzureOpenAiDeploymentName
 
 @description('Azure OpenAI endpoint: Planner')
-output AZURE_OPENAI_ENDPOINT_PLANNER string = azureOpenAiApiEndpointPlanner
+output PLANNER_AZURE_OPENAI_ENDPOINT string = plannerAzureOpenAiApiEndpoint
 
 @description('Azure OpenAI API Version: Planner')
-output AZURE_OPENAI_API_VERSION_PLANNER string = azureOpenAiApiVersionPlanner
+output PLANNER_AZURE_OPENAI_API_VERSION string = plannerAzureOpenAiApiVersion
 
 @description('Azure OpenAI Key: Planner')
 output plannerkeysecret string = plannerKeyParam
@@ -611,5 +611,6 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outpu
 
 @description('Semantic Kernel Diagnostics')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true
+
 @description('Semantic Kernel Diagnostics : if set, content of the messages is traced. Set to false for production')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE bool = true
