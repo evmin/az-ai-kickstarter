@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from typing import ClassVar
 import datetime
@@ -28,6 +29,7 @@ from utils.util import create_agent_from_yaml
 
 # This patetrn demonostrates how to use externally provided o3 family model as a executor
 # IS NOT COMPATIBLE with o1-mini and o1-preview models
+# If the o3 model is not provided, the default executor model will be used as planner
 class ReasonerOrchestrator:
     
     def __init__(self):
@@ -236,16 +238,47 @@ class ReasonerOrchestrator:
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         session_id = f"{user_id}-{current_time}"
         
+        messages = []
+        
         with tracer.start_as_current_span(session_id):
             # async for _ in agent_group_chat.invoke():
                 #     pass
+            yield "WRITER: Prepares the initial draft"
             async for a in agent_group_chat.invoke():
-                self.logger.info("Agent: %s", a)
-                yield a.to_dict()
+                self.logger.info("Agent: %s", a.to_dict())
+                messages.append(a.to_dict())
+                next_action = await self.describe_next_action(messages)
+                self.logger.info("---------------------------")
+                self.logger.info("%s", next_action)
+                yield f"{next_action}"
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
         # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
-        yield reply
+        # Final JSON indicates the response
+        yield json.dumps(reply)
+        
+    async def describe_next_action(self, messages):
+        next_action = await self.kernel.invoke_prompt(
+            function_name="describe_next_action",
+            prompt=f"""
+            Provided the following chat history, what is next action in the agentic chat? 
+            
+            Provide three word summary.
+            Always indicate WHO takes the action, for example: WRITER: Writes revises draft
+            OBS! CRITIC cannot take action, only to evaluate the text and provide a score.
+            
+            IF the last entry is from CRITIC and the score is above 8 - you MUST respond with "CRITIC: Approves the text."
+            
+            AGENTS:
+            - WRITER: Writes and revises the text
+            - CRITIC: Evaluates the text and provides scroring from 1 to 10
+            
+            AGENT_CHAT: {messages}
+            
+            """,
+            settings=self.settings_utility
+        )
+        return next_action
