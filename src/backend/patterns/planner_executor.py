@@ -9,8 +9,11 @@ from semantic_kernel.agents.strategies.termination.termination_strategy import T
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents import ChatMessageContent, TextContent, ImageContent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
+
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
 from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
 
@@ -25,6 +28,7 @@ from opentelemetry.trace import get_tracer
 
 from pydantic import Field
 from utils.util import create_agent_from_yaml
+from plugins.weather.weather import Weather
 
 class PlannerOrchestrator:
     
@@ -83,7 +87,8 @@ class PlannerOrchestrator:
         self.kernel = Kernel(
             services=[executor_service, utility_service, planner_service],
             plugins=[
-                KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
+                KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time"),
+                KernelPlugin.from_object(plugin_instance=Weather(), plugin_name="weather"),
             ])
         
         self.settings_executor = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
@@ -91,6 +96,10 @@ class PlannerOrchestrator:
         
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
         
+        self.planner = create_agent_from_yaml(service_id="planner",
+                                        kernel=self.kernel,
+                                        reasoning_effort="high",
+                                        definition_file_path="agents/planner.yaml")
 
     # --------------------------------------------
     # Create Agent Group Chat
@@ -99,6 +108,7 @@ class PlannerOrchestrator:
 
         self.logger.debug("Creating chat")
         
+       
         writer = create_agent_from_yaml(service_id="planner",
                                         kernel=self.kernel,
                                         definition_file_path="agents/writer.yaml")
@@ -107,6 +117,7 @@ class PlannerOrchestrator:
                                         kernel=self.kernel,
                                         reasoning_effort="low",
                                         definition_file_path="agents/critic.yaml")
+        
         agents=[writer, critic]
 
         agent_group_chat = AgentGroupChat(
@@ -217,7 +228,9 @@ class PlannerOrchestrator:
 
     async def process_conversation(self, user_id, conversation_messages):
         agent_group_chat = self.create_agent_group_chat()
-       
+        
+        
+        
         # Load chat history
         chat_history = [
             ChatMessageContent(
@@ -247,3 +260,28 @@ class PlannerOrchestrator:
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
         return reply
+    
+    async def create_plan(self, user_id, conversation_messages): 
+        
+        planner_task = ChatHistory()
+        planner_task.add_message(
+            ChatMessageContent(
+                role=AuthorRole.USER,
+                content="Write a blogpost about cookies. City Boston."
+            )
+        )
+        
+        responses = [a async for a in self.planner.invoke(planner_task)]
+        
+        messages = []
+
+        for response in responses:
+            choices = response.inner_content.get("choices", [])
+            for choice in choices:
+                msg_content = choice.get("message", {}).get("content", "")
+                if msg_content:
+                    messages.append(msg_content)
+
+        joined_message = "\n".join(messages)
+        
+        return joined_message

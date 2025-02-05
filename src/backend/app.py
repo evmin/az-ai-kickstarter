@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from utils.util import load_dotenv_from_azd, set_up_tracing, set_up_metrics, set_up_logging
 from patterns.debate import DebateOrchestrator
 from patterns.reasoner import ReasonerOrchestrator
+from patterns.planner_executor import PlannerOrchestrator
 
 load_dotenv_from_azd()
 set_up_tracing()
@@ -22,7 +23,8 @@ logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(loggin
 # Choose pattern to use
 # orchestrator = DebateOrchestrator()
 # Requires o1 or o3-mini 
-orchestrator = ReasonerOrchestrator()
+# orchestrator = ReasonerOrchestrator()
+orchestrator = PlannerOrchestrator()
 
 
 app = FastAPI()
