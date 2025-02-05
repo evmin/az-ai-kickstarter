@@ -40,14 +40,46 @@ It is possible to work with a fully local setup.
 
 ### Quick deploy
 
+
+#### Deployment pre-requisites
+
+Codespaces and DevContainer come with all deployment and development pre-requisites already installed.
+
+On Windows you can install the pre-requisites by executing the following commands in a PowerShell terminal:
+```powershell
+	winget install Python.Python.3.13
+	winget install Microsoft.PowerShell
+	winget install Microsoft.AzureCLI
+	winget install Microsoft.Azd
+	winget install Microsoft.Git
+```
+
+Ubuntu/WSL: TBD
+
+MacOSX: TBD
+
+#### Deploy with authentication disabled
+
 To deploy Azure AI App Kickstarter just run: 
 ```bash
 azd up
 ``` 
 
-> [!WARNING] The application automatically configures authentication to secure frontend
-> To do so it creates an app registration in EntraID. 
-> If the account you are using to deploy the app does not have the required permissions, disable the preprovision script in azure.yaml
+#### Deploy with authentication enabled
+
+AZD can automatically configures authentication to secure frontend and/or backend. To do so execute the following command before `azd up`:
+```bash
+azd env set WITH_AUTHENTICATION true
+```
+
+If you already executed `azd up` just set the variable and run provisioning again:
+```bash
+azd env set WITH_AUTHENTICATION true
+azd provision
+```
+
+> [!WARNING] The account executing `azd` needs to be able to create Application Registrations in your Azure
+> Entra ID tenant.
 
 ## How it works
 
@@ -74,7 +106,7 @@ export AOAI_API_VERSION="2024-12-01-preview"
 export aoaikeysecret="key"
 ```
 
->[WARNING!] The `aoaikeysecret` is not set in azd .azure/<env>./.env file automatically. 
+>[WARNING!] The `aoaikeysecret` is not set in azd .azure/<env>./.env file automatically.
 > In order to use it when running the model locally, either set it as env variable or add it to azd `.env` file.
 
 ### Architecture
@@ -104,7 +136,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## Responsible AI Guidelines
 
-This project follows below responsible AI guidelines and best practices, please review them before using this project:
+This project follows the below responsible AI guidelines and best practices, please review them before using this project:
 
 - [Microsoft Responsible AI Guidelines](https://www.microsoft.com/en-us/ai/responsible-ai)
 - [Responsible AI practices for Azure OpenAI models](https://learn.microsoft.com/en-us/legal/cognitive-services/openai/overview)
@@ -113,7 +145,7 @@ This project follows below responsible AI guidelines and best practices, please 
 ## Acknowledgements
 
   * Kudos to [Pamela Fox](https://github.com/pamelafox) and [James Casey](https://github.com/jamesc) for [Azure-Samples/openai-chat-app-entra-auth-builtin](https://github.com/Azure-Samples/openai-chat-app-entra-auth-builtin) from which we borrowed most of authentication & authorization setup.
-  * Special thank you to [Michael Hofer](https://github.com/mhofer1976) for extensive testing and solvng o1 compatibility
+  * Special thank you to [Michael Hofer](https://github.com/mhofer1976) for extensive testing and solving o1 compatibility
 
 ## Authors
 
