@@ -3,6 +3,7 @@ from subprocess import run, PIPE
 import os
 import logging
 from dotenv import load_dotenv
+import yaml
 
 from opentelemetry.sdk.resources import Resource
 from opentelemetry._logs import set_logger_provider
@@ -36,6 +37,12 @@ from azure.monitor.opentelemetry.exporter import (
     AzureMonitorMetricExporter,
     AzureMonitorTraceExporter,
 )
+
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
+
+from semantic_kernel.functions import KernelArguments
+from semantic_kernel.agents import ChatCompletionAgent
 
 def load_dotenv_from_azd():
     result = run("azd env get-values", stdout=PIPE, stderr=PIPE, shell=True, text=True)
@@ -124,3 +131,34 @@ def set_up_logging():
     # FILTER - WHAT TO LOG - EXPLICITLY
     # handler.addFilter(logging.Filter("semantic_kernel"))
     handler.addFilter(KernelFilter())
+
+# --------------------------------------------
+# UTILITY - CREATES an agent based on YAML definition
+# --------------------------------------------
+def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_effort=None):
+        
+        with open(definition_file_path, 'r', encoding='utf-8') as file:
+            definition = yaml.safe_load(file)
+            
+        settings = AzureChatPromptExecutionSettings(
+                temperature=definition.get('temperature', 0.5),
+                function_choice_behavior=FunctionChoiceBehavior.Auto(
+                    filters={"included_plugins": definition.get('included_plugins', [])}
+                ))
+    
+        # Resoning model specifics
+        model_id = kernel.get_service(service_id=service_id).ai_model_id
+        if model_id.lower().startswith("o"):
+            settings.temperature = None
+            settings.reasoning_effort = reasoning_effort
+            
+        agent = ChatCompletionAgent(
+            service_id=service_id,
+            kernel=kernel,
+            arguments=KernelArguments(settings=settings),
+            name=definition['name'],
+            description=definition['description'],
+            instructions=definition['instructions']
+        )
+        
+        return agent

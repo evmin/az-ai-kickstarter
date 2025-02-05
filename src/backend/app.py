@@ -2,13 +2,14 @@ import os
 import logging
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
-from orchestrator import SemanticOrchestrator
-import util
+from utils.util import load_dotenv_from_azd, set_up_tracing, set_up_metrics, set_up_logging
+from patterns.debate import DebateOrchestrator
+from patterns.reasoner import ReasonerOrchestrator
 
-util.load_dotenv_from_azd()
-util.set_up_tracing()
-util.set_up_metrics()
-util.set_up_logging()
+load_dotenv_from_azd()
+set_up_tracing()
+set_up_metrics()
+set_up_logging()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +19,12 @@ logger = logging.getLogger(__name__)
 logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
 logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
 
-orchestrator = SemanticOrchestrator()
+# Choose pattern to use
+# orchestrator = DebateOrchestrator()
+# Requires o1 or o3-mini 
+orchestrator = ReasonerOrchestrator()
+
+
 app = FastAPI()
 
 logger.info("Diagnostics: %s", os.getenv('SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS'))
