@@ -42,6 +42,6 @@ async def http_blog(request_body: dict = Body(...)):
 
     async def doit():
         async for i in orchestrator.process_conversation(user_id, conversation_messages):
-            yield json.dumps(i) + '\n'
+            yield i + '\n'
 
     return StreamingResponse(doit(), media_type="application/json")    
