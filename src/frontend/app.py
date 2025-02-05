@@ -17,23 +17,6 @@ def load_dotenv_from_azd():
         logging.info(f"AZD environment not found. Trying to load from .env file...")
         load_dotenv()
 
-def call_backend(backend_endpoint, payload):
-    """
-    Call the backend API with the given payload. Raises and exception if HTTP response code is not 200.
-    """
-    url = f'{backend_endpoint}/blog'
-    headers = {}
-    response = requests.post(url, json=payload, headers=headers)
-    response.raise_for_status()
-    return response
-
-def get_principal_name():
-    result = st.context.headers.get('x-ms-client-principal-name')
-    if result:
-        return result
-    else:
-        return "Anonymous"
-
 def get_principal_id():
     result = st.context.headers.get('x-ms-client-principal-id')
     if result:
@@ -42,6 +25,10 @@ def get_principal_id():
         return "default_user_id"
 
 def get_principal_display_name():
+    """
+    Get the display name of the current user from the request headers.
+    See https://learn.microsoft.com/en-us/azure/container-apps/authentication#access-user-claims-in-application-code for more information.
+    """
     default_user_name = "Default User"
     principal = st.context.headers.get('x-ms-client-principal')
     if principal:
@@ -53,8 +40,23 @@ def get_principal_display_name():
 
 load_dotenv_from_azd()
 
-st.write(f"Welcome {get_principal_display_name()}!")
-st.markdown('<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True)
+st.sidebar.write(f"Welcome, {get_principal_display_name()}!")
+st.sidebar.markdown(
+    '<a href="/.auth/logout" target = "_self">Sign Out</a>', unsafe_allow_html=True
+)
 
-st.write("Calling backend API...")
-st.write(call_backend(os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000'), {"topic": "cookies", "user_id": get_principal_id()}).json())
+result = None
+with st.status("Agents are crafting a response...", expanded=True) as status:
+    try:
+        url = f'{os.getenv('BACKEND_ENDPOINT', 'http://localhost:8000')}/blog'
+        payload = {"topic": "cookies", "user_id": get_principal_id()}
+        with requests.post(url, json=payload, stream=True) as response:
+            for line in response.iter_lines():
+                result = json.loads(line.decode('utf-8'))
+                status.write(result)
+        status.update(label="Backend call complete", state="complete", expanded=False)
+    except Exception as e:
+        status.update(
+            label=f"Backend call failed: {e}", state="complete", expanded=False
+        )
+st.markdown(result["content"])

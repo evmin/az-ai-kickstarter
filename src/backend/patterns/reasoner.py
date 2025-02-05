@@ -241,10 +241,11 @@ class ReasonerOrchestrator:
                 #     pass
             async for a in agent_group_chat.invoke():
                 self.logger.info("Agent: %s", a)
+                yield a.to_dict()
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
         # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
-        return reply
+        yield reply
