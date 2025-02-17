@@ -38,7 +38,6 @@ param externalIngressAllowed bool = true
 
 param exists bool
 
-
 var keyvalueSecrets = [for secret in items(secrets): {
   name: secret.key
   value: secret.value
@@ -50,6 +49,22 @@ var keyvaultIdentitySecrets = [for secret in items(keyvaultIdentities): {
   identity: secret.value.identity
 }]
 
+var environment = [
+  for key in objectKeys(env): {
+    name: key
+    value: '${env[key]}'
+  }
+]
+
+var secret_refs = [
+  for key in objectKeys(secrets): {
+    name: key
+    secretRef: key
+  }
+]
+
+var environmentVariables = union(environment, secret_refs)
+
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' existing = { name: containerAppsEnvironmentName }
 
 module fetchLatestImage './fetch-container-image.bicep' = {
@@ -59,22 +74,6 @@ module fetchLatestImage './fetch-container-image.bicep' = {
     name: name
   }
 }
-
-var environment = [
-            for key in objectKeys(env): {
-              name: key
-              value: '${env[key]}'
-            }
-          ]
-
-var secret_refs = [
-            for key in objectKeys(secrets): {
-              name: key
-              secretRef: key
-            }
-          ]
-
-var env_vars = union(environment, secret_refs)
 
 resource app 'Microsoft.App/containerApps@2024-08-02-preview' = {
   name: name
@@ -108,7 +107,7 @@ resource app 'Microsoft.App/containerApps@2024-08-02-preview' = {
         {
           image: fetchLatestImage.outputs.?containers[?0].?image ?? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           name: 'main'
-          env: env_vars
+          env: environmentVariables
           resources: {
             cpu: json('1.0')
             memory: '2.0Gi'

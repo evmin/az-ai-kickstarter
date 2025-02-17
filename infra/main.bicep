@@ -20,11 +20,19 @@ param extraTags object = {}
 @description('Location for all resources')
 param location string = resourceGroup().location
 
-@description('Externally provided model configuration')
+/* ------------ Optional externally provided model configuration ------------ */
+
+@description('Optional. Externally provided model end point')
 param plannerEndpointParam string = ''
+
+@description('Optional. Externally provided model deployment name')
 param plannerDeploymentNameParam string = ''
-param plannerKeyParam string = ''
+
+@description('Optional. Externally provided model API version')
 param plannerApiVersionParam string = ''
+
+@description('Optional. Externally provided model key')
+param plannerKeyParam string = ''
 
 /* ---------------------------- Shared Resources ---------------------------- */
 
@@ -115,6 +123,64 @@ var tags = union(
   extraTags
 )
 
+@description('Azure OpenAI API Version')
+var azureOpenAiApiVersion = '2024-12-01-preview'
+
+// ------------------------
+// Order is important:
+// 1. Executor
+// 2. Utility
+// 3. Planner (not implemented yet)
+@description('Model deployment configurations')
+var deployments = [
+  {
+    name: 'gpt-4o-2024-11-20'
+    sku: {
+      name: 'GlobalStandard'
+      capacity: 50
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o'
+      version: '2024-11-20'
+    }
+    versionUpgradeOption: 'OnceCurrentVersionExpired'
+  }
+  {
+    name: 'gpt-4o-mini-2024-07-18'
+    sku: {
+      name: 'GlobalStandard'
+      capacity: 50
+    }
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o-mini'
+      version: '2024-07-18'
+    }
+    versionUpgradeOption: 'OnceCurrentVersionExpired'
+  }
+  // {
+  //   name: 'o3-mini-2025-01-31'
+  //   sku: {
+  //     name: 'GlobalStandard'
+  //     capacity: 50
+  //   }
+  //   model: {
+  //     format: 'OpenAI'
+  //     name: 'o3-mini'
+  //     version: '2025-01-31'
+  //   }
+  //   versionUpgradeOption: 'OnceCurrentVersionExpired'
+  // }
+]
+
+var azureOpenAiApiEndpoint = azureOpenAi.outputs.endpoint
+var executorAzureOpenAiDeploymentName = deployments[0].name
+var utilityAzureOpenAiDeploymentName =  deployments[1].name
+
+var plannerAzureOpenAiApiVersion = empty(plannerApiVersionParam) ? '2024-12-01-preview' : plannerApiVersionParam
+var plannerAzureOpenAiApiEndpoint = empty(plannerEndpointParam) ? azureOpenAi.outputs.endpoint : plannerEndpointParam
+var plannerAzureOpenAiDeploymentName = empty(plannerDeploymentNameParam) ? deployments[0].name : plannerDeploymentNameParam
 
 /* --------------------- Globally Unique Resource Names --------------------- */
 
@@ -129,12 +195,15 @@ var _storageAccountName = take(
   '${abbreviations.storageStorageAccounts}${alphaNumericEnvironmentName}${resourceToken}',
   24
 )
-var _azureOpenAiName = take('${abbreviations.cognitiveServicesOpenAI}${alphaNumericEnvironmentName}${resourceToken}', 63)
+var _azureOpenAiName = take(
+  '${abbreviations.cognitiveServicesOpenAI}${alphaNumericEnvironmentName}${resourceToken}',
+  63
+)
 var _aiHubName = take('${abbreviations.aiPortalHub}${environmentName}', 260)
 var _aiProjectName = take('${abbreviations.aiPortalProject}${environmentName}', 260)
-// var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
+var _aiSearchServiceName = take('${abbreviations.searchSearchServices}${environmentName}', 260)
 
-  var _containerRegistryName = !empty(containerRegistryName)
+var _containerRegistryName = !empty(containerRegistryName)
   ? containerRegistryName
   : take('${abbreviations.containerRegistryRegistries}${alphaNumericEnvironmentName}${resourceToken}', 50)
 var _keyVaultName = take('${abbreviations.keyVaultVaults}${alphaNumericEnvironmentName}-${resourceToken}', 24)
@@ -176,7 +245,7 @@ module hub 'modules/ai/hub.bicep' = {
     openAiName: azureOpenAi.outputs.name
     openAiConnectionName: 'aoai-connection'
     openAiContentSafetyConnectionName: 'aoai-content-safety-connection'
-    // aiSearchName: searchService.outputs.name
+    aiSearchName: searchService.outputs.name
     aiSearchConnectionName: 'search-service-connection'
   }
 }
@@ -254,54 +323,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.15.0' = {
   }
 }
 
-// ------------------------
-// Order is important:
-// 1. Executor
-// 2. Utility
-// 3. Planner (not implemented yet)
-var deployments = [
-  {
-    name: 'gpt-4o-2024-11-20'
-    sku: {
-      name: 'GlobalStandard'
-      capacity: 50
-    }
-    model: {
-      format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-11-20'
-    }
-    versionUpgradeOption: 'OnceCurrentVersionExpired'
-  }
-  {
-    name: 'gpt-4o-mini-2024-07-18'
-    sku: {
-      name: 'GlobalStandard'
-      capacity: 50
-    }
-    model: {
-      format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: '2024-07-18'
-    }
-    versionUpgradeOption: 'OnceCurrentVersionExpired'
-  }
-  // {
-  //   name: 'o3-mini-2025-01-31'
-  //   sku: {
-  //     name: 'GlobalStandard'
-  //     capacity: 50
-  //   }
-  //   model: {
-  //     format: 'OpenAI'
-  //     name: 'o3-mini'
-  //     version: '2025-01-31'
-  //   }
-  //   versionUpgradeOption: 'OnceCurrentVersionExpired'
-  // }
-]
-
-
 module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   name: 'cognitiveServices'
   params: {
@@ -322,32 +343,20 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
         roleDefinitionIdOrName: 'Cognitive Services OpenAI Contributor'
         principalId: azurePrincipalId
       }
-
     ]
   }
 }
 
-var azureOpenAiApiVersion = '2024-12-01-preview'
-
-var azureOpenAiApiEndpoint = azureOpenAi.outputs.endpoint
-var azureOpenAiDeploymentNameExecutor = deployments[0].name 
-var azureOpenAiDeploymentNameUtility =  deployments[1].name 
-
-var azureOpenAiApiVersionPlanner = empty(plannerApiVersionParam) ? '2024-12-01-preview' : plannerApiVersionParam
-var azureOpenAiApiEndpointPlanner = empty(plannerEndpointParam) ? azureOpenAi.outputs.endpoint : plannerEndpointParam
-var azureOpenAiDeploymentNamePlanner = empty(plannerDeploymentNameParam) ? deployments[0].name : plannerDeploymentNameParam
-
-/* ---------------------------- Search  ------------------------------ */
-// module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
-//   name: _aiSearchServiceName
-//   scope: resourceGroup()
-//   params: {
-//     location: location
-//     tags: tags
-//     name: _aiSearchServiceName
-//     sku: aiSearchSkuName
-//   }
-// }
+module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
+  name: _aiSearchServiceName
+  scope: resourceGroup()
+  params: {
+    location: location
+    tags: tags
+    name: _aiSearchServiceName
+    sku: aiSearchSkuName
+  }
+}
 
 /* ---------------------------- Observability  ------------------------------ */
 
@@ -530,18 +539,19 @@ module backendApp 'modules/app/container-apps.bicep' = {
 
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
       AZURE_OPENAI_ENDPOINT: azureOpenAiApiEndpoint
-      AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR: azureOpenAiDeploymentNameExecutor
-      AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY: azureOpenAiDeploymentNameUtility
+      EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME: executorAzureOpenAiDeploymentName
+      UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME: utilityAzureOpenAiDeploymentName
 
-      AZURE_OPENAI_ENDPOINT_PLANNER: azureOpenAiApiEndpointPlanner
-      AZURE_OPENAI_API_VERSION_PLANNER: azureOpenAiApiVersionPlanner
-      AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER: azureOpenAiDeploymentNamePlanner
+      PLANNER_AZURE_OPENAI_ENDPOINT: plannerAzureOpenAiApiEndpoint
+      PLANNER_AZURE_OPENAI_API_VERSION: plannerAzureOpenAiApiVersion
+      PLANNER_AZURE_OPENAI_DEPLOYMENT_NAME: plannerAzureOpenAiDeploymentName
     }
     secrets: union(
       {},
       empty(plannerKeyParam) ? {} : {
         plannerkeysecret: plannerKeyParam
-    })
+      }
+    )
   }
 }
 
@@ -554,6 +564,9 @@ module backendApp 'modules/app/container-apps.bicep' = {
 // `azd env get-values --output json` for json output.
 // To generate your own `.env` file run `azd env get-values > .env`
 
+
+/* --------------------------- Apps Deployment ----------------------------- */
+
 @description('The endpoint of the container registry.') // necessary for azd deploy
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 
@@ -562,6 +575,9 @@ output SERVICE_FRONTEND_URL string = frontendApp.outputs.URL
 
 @description('Endpoint URL of the Backend service')
 output SERVICE_BACKEND_URL string = backendApp.outputs.URL
+
+
+/* ------------------------ Authentication & RBAC -------------------------- */
 
 @description('Activate authentication if true')
 output WITH_AUTHENTICATION bool = withAuthentication
@@ -575,7 +591,8 @@ output AZURE_PRINCIPAL_ID string = azurePrincipalId
 @description('Application registration client ID')
 output AZURE_CLIENT_APP_ID string = authClientId
 
-// MODELS
+/* ------------------------------- Models --------------------------------- */
+
 @description('Azure OpenAI endpoint')
 output AZURE_OPENAI_ENDPOINT string = azureOpenAiApiEndpoint
 
@@ -583,22 +600,24 @@ output AZURE_OPENAI_ENDPOINT string = azureOpenAiApiEndpoint
 output AZURE_OPENAI_API_VERSION string = azureOpenAiApiVersion
 
 @description('Azure OpenAI Model Deployment Name - Executor Service')
-output AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR string = azureOpenAiDeploymentNameExecutor
+output EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME string = executorAzureOpenAiDeploymentName
 
 @description('Azure OpenAI Model Deployment Name - Utility Service')
-output AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY string = azureOpenAiDeploymentNameUtility
+output UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME string = utilityAzureOpenAiDeploymentName
 
 @description('Azure OpenAI Model Deployment Name: Planner')
-output AZURE_OPENAI_DEPLOYMENT_NAME_PLANNER string = azureOpenAiDeploymentNamePlanner
+output PLANNER_AZURE_OPENAI_DEPLOYMENT_NAME string = plannerAzureOpenAiDeploymentName
 
 @description('Azure OpenAI endpoint: Planner')
-output AZURE_OPENAI_ENDPOINT_PLANNER string = azureOpenAiApiEndpointPlanner
+output PLANNER_AZURE_OPENAI_ENDPOINT string = plannerAzureOpenAiApiEndpoint
 
 @description('Azure OpenAI API Version: Planner')
-output AZURE_OPENAI_API_VERSION_PLANNER string = azureOpenAiApiVersionPlanner
+output PLANNER_AZURE_OPENAI_API_VERSION string = plannerAzureOpenAiApiVersion
 
 @description('Azure OpenAI Key: Planner')
 output plannerkeysecret string = plannerKeyParam
+
+/* --------------------------- Observability ------------------------------ */
 
 @description('Application Insights name')
 output AZURE_APPLICATION_INSIGHTS_NAME string = appInsightsComponent.outputs.name
@@ -611,5 +630,6 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsightsComponent.outpu
 
 @description('Semantic Kernel Diagnostics')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true
-@description('Semantic Kernel Diagnostics : if set, content of the messages is traced. Set to false for production')
+
+@description('Semantic Kernel Diagnostics: if set, content of the messages is traced. Set to false in production')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE bool = true

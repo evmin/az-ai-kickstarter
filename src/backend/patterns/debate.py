@@ -40,8 +40,8 @@ class DebateOrchestrator:
 
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-        deployment_name_executor = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_EXECUTOR")
-        deployment_name_utility = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME_UTILITY")
+        executor_deployment_name = os.getenv("EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME")
+        utility_deployment_name = os.getenv("UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME")
         
         # planner_api_key = os.getenv("aoaikeysecret", None)
         
@@ -50,7 +50,7 @@ class DebateOrchestrator:
             ai_model_id="executor",
             service_id="executor",
             client=ChatCompletionsClient(
-                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_executor}",
+                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{executor_deployment_name}",
                 api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
@@ -60,7 +60,7 @@ class DebateOrchestrator:
             ai_model_id="utility",
             service_id="utility",
             client=ChatCompletionsClient(
-                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{deployment_name_utility}",
+                endpoint=f"{str(endpoint).strip('/')}/openai/deployments/{utility_deployment_name}",
                 api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
