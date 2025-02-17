@@ -47,7 +47,7 @@ Codespaces and DevContainer come with all deployment and development pre-requisi
 
 On Windows you can install the pre-requisites by executing the following commands in a PowerShell terminal:
 ```powershell
-	winget install Python.Python.3.13
+	winget install Python.Python.3.12
 	winget install Microsoft.PowerShell
 	winget install Microsoft.AzureCLI
 	winget install Microsoft.Azd
