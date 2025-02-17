@@ -52,11 +52,12 @@ def get_principal_display_name():
     else:
         return default_user_name
 
-def is_valid_json(json_string):
-    try:
-        json.loads(json_string)
-        return True
-    except json.JSONDecodeError:
+
+def is_valid_json(json_string): 
+    try: 
+        json.loads(json_string) 
+        return True 
+    except json.JSONDecodeError: 
         return False
 
 load_dotenv_from_azd()
@@ -76,12 +77,14 @@ with st.status("Agents are crafting a response...", expanded=True) as status:
         with requests.post(url, json=payload, headers={}, stream=True) as response:
             for line in response.iter_lines():
                 result = line.decode('utf-8')
+                # For each line as JSON
+                # result = json.loads(line.decode('utf-8'))
                 if not is_valid_json(result):
-                   status.write(result)
-
+                   status.write(result)                     
         status.update(label="Backend call complete", state="complete", expanded=False)
     except Exception as e:
         status.update(
             label=f"Backend call failed: {e}", state="complete", expanded=False
         )
+# st.markdown(result["content"])
 st.markdown(json.loads(result)["content"])
