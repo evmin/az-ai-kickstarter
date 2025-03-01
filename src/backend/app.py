@@ -4,7 +4,6 @@ import os
 from fastapi import FastAPI, Body
 from fastapi.responses import StreamingResponse
 from patterns.debate import DebateOrchestrator
-from patterns.reasoner import ReasonerOrchestrator
 from utils.util import load_dotenv_from_azd, set_up_tracing, set_up_metrics, set_up_logging
 
 load_dotenv_from_azd()

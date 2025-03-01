@@ -347,16 +347,17 @@ module azureOpenAi 'modules/ai/cognitiveservices.bicep' = {
   }
 }
 
-module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
-  name: _aiSearchServiceName
-  scope: resourceGroup()
-  params: {
-    location: location
-    tags: tags
-    name: _aiSearchServiceName
-    sku: aiSearchSkuName
-  }
-}
+// Commenting out - not yet used
+// module searchService 'br/public:avm/res/search/search-service:0.8.2' = {
+//   name: _aiSearchServiceName
+//   scope: resourceGroup()
+//   params: {
+//     location: location
+//     tags: tags
+//     name: _aiSearchServiceName
+//     sku: aiSearchSkuName
+//   }
+// }
 
 /* ---------------------------- Observability  ------------------------------ */
 
