@@ -21,9 +21,7 @@ logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(l
 logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
 
 # Choose pattern to use
-# orchestrator = DebateOrchestrator()
-# Requires o1 or o3-mini
-orchestrator = ReasonerOrchestrator()
+orchestrator = DebateOrchestrator()
 
 app = FastAPI()
 
@@ -40,8 +38,8 @@ async def http_blog(request_body: dict = Body(...)):
     conversation_messages = []
     conversation_messages.append({'role': 'user', 'name': 'user', 'content': content})
 
-    async def process_conversation():
+    async def doit():
         async for i in orchestrator.process_conversation(user_id, conversation_messages):
             yield i + '\n'
 
-    return StreamingResponse(process_conversation(), media_type="application/json")
+    return StreamingResponse(doit(), media_type="application/json")    

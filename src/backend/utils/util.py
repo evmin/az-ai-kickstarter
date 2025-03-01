@@ -162,3 +162,26 @@ def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_e
         )
         
         return agent
+    
+async def describe_next_action(kernel, settings, messages):
+        next_action = await kernel.invoke_prompt(
+            function_name="describe_next_action",
+            prompt=f"""
+            Provided the following chat history, what is next action in the agentic chat? 
+            
+            Provide three word summary.
+            Always indicate WHO takes the action, for example: WRITER: Writes revises draft
+            OBS! CRITIC cannot take action, only to evaluate the text and provide a score.
+            
+            IF the last entry is from CRITIC and the score is above 8 - you MUST respond with "CRITIC: Approves the text."
+            
+            AGENTS:
+            - WRITER: Writes and revises the text
+            - CRITIC: Evaluates the text and provides scroring from 1 to 10
+            
+            AGENT_CHAT: {messages}
+            
+            """,
+            settings=settings
+        )
+        return next_action

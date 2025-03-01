@@ -1,7 +1,9 @@
 import os
+import json
 import logging
 from typing import ClassVar
 import datetime
+from utils.util import describe_next_action
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents import AgentGroupChat
@@ -42,8 +44,6 @@ class DebateOrchestrator:
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
         executor_deployment_name = os.getenv("EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME")
         utility_deployment_name = os.getenv("UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME")
-        
-        # planner_api_key = os.getenv("aoaikeysecret", None)
         
         credential = DefaultAzureCredential()
         executor_service = AzureAIInferenceChatCompletion(
@@ -154,7 +154,7 @@ class DebateOrchestrator:
         Create a chat termination strategy that terminates when the Critic is satisfied
         params:
             agents: List of agents to trigger termination evaluation (critic only)
-            maximum_iterations: Maximum number of iterations before termination
+            maximum_iterations: Maximum number of iterations before termination as a fallback mechanism
         """
 
         # Using UTILITY model - the task is simple - evaluation score extraction
@@ -175,7 +175,7 @@ class DebateOrchestrator:
                 """)
 
             async def should_agent_terminate(self, agent, history):
-                """Terminate if the evaluation score is more then the passing score."""
+                """Terminate if the evaluation score > the passing score."""
                 
                 self.iteration += 1
                 self.logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
@@ -198,8 +198,14 @@ class DebateOrchestrator:
 
         return CompletionTerminationStrategy(agents=agents,
                                              maximum_iterations=maximum_iterations)
-
+        
     async def process_conversation(self, user_id, conversation_messages):
+        """ 
+        User ID is used for unique session id for AI Foundry Tracing 
+        conversation_messages: List of dictionaries with role, name and content.
+                               Allows for external chat history to be loaded.
+        
+        """
         agent_group_chat = self.create_agent_group_chat()
        
         # Load chat history
@@ -215,19 +221,26 @@ class DebateOrchestrator:
 
         tracer = get_tracer(__name__)
         
-        # UNIQUE SESSION ID is a must
+        # UNIQUE SESSION ID is a must for AI Foundry Tracing
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         session_id = f"{user_id}-{current_time}"
         
+        messages = []
+        
         with tracer.start_as_current_span(session_id):
-            # async for _ in agent_group_chat.invoke():
-                #     pass
+            yield "WRITER: Prepares the initial draft"
             async for a in agent_group_chat.invoke():
-                self.logger.info("Agent: %s", a)
+                self.logger.info("Agent: %s", a.to_dict())
+                messages.append(a.to_dict())
+                next_action = await describe_next_action(self.kernel, self.settings_utility, messages)
+                self.logger.info("%s", next_action)
+                # Returning plain text to indicate that it is a status update
+                yield f"{next_action}"
 
         response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
 
-        # Writer response, as we run termination evaluation on Critic, ther last message will be from Critic
+        # Last writer response
         reply = [r for r in response if r.name == "Writer"][-1].to_dict()
         
-        return reply
+        # Final message is formatted as JSON to indicate the final response
+        yield json.dumps(reply)
