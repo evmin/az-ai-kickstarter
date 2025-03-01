@@ -21,9 +21,7 @@ logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(l
 logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
 
 # Choose pattern to use
-# orchestrator = DebateOrchestrator()
-# Requires o1 or o3-mini 
-orchestrator = ReasonerOrchestrator()
+orchestrator = DebateOrchestrator()
 
 app = FastAPI()
 
