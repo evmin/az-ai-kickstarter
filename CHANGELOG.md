@@ -27,10 +27,9 @@ Synchronised with the [AZ AI Generator](https://github.com/dbroeglin/generator-a
 ## [0.5.2] - 2025-02-02
 
 ### Added
-- o3-mini/o1 compatible pattern - reasoner - without changing the blog writing context
 - patterns in the backend to be the first class abstractions
 - Explicit LLM service roles - planner, executor, utility
 
 ### Changed
 - Upgraded to SK 1.20.0
-- It is possible to reference the externally provision OpenAI service only for planner LLM service 
+- It is possible to reference the externally provisioned OpenAI service (planner service only)
