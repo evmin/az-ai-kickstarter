@@ -230,6 +230,7 @@ class DebateOrchestrator:
         with tracer.start_as_current_span(session_id):
             yield "WRITER: Prepares the initial draft"
             async for a in agent_group_chat.invoke():
+                self.logger.info("Agent: ----------------------------------")
                 self.logger.info("Agent: %s", a.to_dict())
                 messages.append(a.to_dict())
                 next_action = await describe_next_action(self.kernel, self.settings_utility, messages)

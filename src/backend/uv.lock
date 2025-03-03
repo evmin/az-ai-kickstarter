@@ -103,16 +103,16 @@ wheels = [
 
 [[package]]
 name = "azure-ai-inference"
-version = "1.0.0b7"
+version = "1.0.0b9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
     { name = "isodate" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/37/233eee0bebbf631d2f911a9f1ebbc3784b100d9bfb84efc275e71c1ea636/azure_ai_inference-1.0.0b7.tar.gz", hash = "sha256:bd912f71f7f855036ca46c9a21439f290eed5e61da418fd26bbb32e3c68bcce3", size = 175883 }
+sdist = { url = "https://files.pythonhosted.org/packages/4e/6a/ed85592e5c64e08c291992f58b1a94dab6869f28fb0f40fd753dced73ba6/azure_ai_inference-1.0.0b9.tar.gz", hash = "sha256:1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4", size = 182408 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/b6/5ba830eddc59f820c654694d476c14a3dd9c1f828ff9b48eb8b21dfd5f01/azure_ai_inference-1.0.0b7-py3-none-any.whl", hash = "sha256:59bb6a9ee62bd7654a69ca2bf12fe9335d7045df95b491cb8b5f9e3791c86175", size = 123030 },
+    { url = "https://files.pythonhosted.org/packages/4f/0f/27520da74769db6e58327d96c98e7b9a07ce686dff582c9a5ec60b03f9dd/azure_ai_inference-1.0.0b9-py3-none-any.whl", hash = "sha256:49823732e674092dad83bb8b0d1b65aa73111fab924d61349eb2a8cdc0493990", size = 124885 },
 ]
 
 [package.optional-dependencies]
@@ -165,7 +165,7 @@ wheels = [
 
 [[package]]
 name = "azure-monitor-opentelemetry-exporter"
-version = "1.0.0b33"
+version = "1.0.0b34"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -175,9 +175,9 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "psutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/26/36541a7fa3285b2b6387bbea96bca6574916567d8328f8ec03d4340a304b/azure_monitor_opentelemetry_exporter-1.0.0b33.tar.gz", hash = "sha256:1cbbd41b4cb44a2ade016408b23a21762583b9da913d8ae259f29356d3a6d0ae", size = 182939 }
+sdist = { url = "https://files.pythonhosted.org/packages/50/90/b2a58098c23339d5edb1009d30a57b4804b5df5b598c36970e878f5c8756/azure_monitor_opentelemetry_exporter-1.0.0b34.tar.gz", hash = "sha256:961eeba5d40579e25d9a741e0412ee8b32b327e54d968714e2cf57cc486db05d", size = 185885 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/5f/ed4963d6276501289c46c2a2ecf4c4201b6a4c6fb7ce21db4d205544e124/azure_monitor_opentelemetry_exporter-1.0.0b33-py2.py3-none-any.whl", hash = "sha256:ebcf86c9b717f9b82bbceb89b55b09fd7147700264ae7ecabc424d90a9f5f01a", size = 151685 },
+    { url = "https://files.pythonhosted.org/packages/57/37/e642dcc69422c00499f60dda5c3f7b0b8b9048747b83597fb30c000e8146/azure_monitor_opentelemetry_exporter-1.0.0b34-py2.py3-none-any.whl", hash = "sha256:947290ef4d5f3e4b0547c0c5c0ea28432072f03f35e253438258c0cbbfc125e9", size = 153139 },
 ]
 
 [[package]]
@@ -200,9 +200,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "azure-ai-inference", extras = ["opentelemetry"], specifier = ">=1.0.0b7" },
+    { name = "azure-ai-inference", extras = ["opentelemetry"], specifier = ">=1.0.0b9" },
     { name = "azure-identity", specifier = ">=1.19.0" },
-    { name = "azure-monitor-opentelemetry-exporter", specifier = ">=1.0.0b33" },
+    { name = "azure-monitor-opentelemetry-exporter", specifier = ">=1.0.0b34" },
     { name = "fastapi", specifier = "~=0.115.6" },
     { name = "openai", specifier = ">=1.61.0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.29.0" },
