@@ -1,0 +1,32 @@
+import chainlit as cl
+from azure.ai.projects.aio import AIProjectClient
+from semantic_kernel.agents import (
+    AzureAIAgent,
+    AzureAIAgentThread,
+)
+
+class AIFoundryAgentProfile:
+    def __init__(self, agent: dict):
+        self.agent = agent
+
+    @property
+    def name(self) -> str:
+        return self.agent["name"]
+
+    @property
+    def description(self) -> str:
+        return self.agent["description"]
+
+
+    @property
+    def markdown_description(self) -> str:
+        return f"**Foundry Agent**: {self.description or "No description available."}"
+    
+    async def run(self, client: AIProjectClient, message: cl.Message) -> AzureAIAgent:
+        agent = AzureAIAgent(client=client, definition=self.agent)
+        thread: AzureAIAgentThread = cl.user_session.get("thread", None)
+
+        response = await agent.get_response(messages=message.content, thread=thread)
+        thread = response.thread
+        cl.user_session.set("thread", thread)
+        await cl.Message(content=response.content.content).send()

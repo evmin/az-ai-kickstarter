@@ -172,8 +172,8 @@ def setup_telemetry(name):
         datefmt="[%X]",
         handlers=[RichHandler(rich_tracebacks=True)],
     )
-    #logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
-    #logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
+    logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+    logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
     os.environ["AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED"] = "true"

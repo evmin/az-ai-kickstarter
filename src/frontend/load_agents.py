@@ -32,11 +32,13 @@ async def main() -> None:
 
         for spec in sorted(Path("agents").glob("*.yaml")):
             with open(spec, "r") as f:
-                agent_spec = yaml.safe_load(f)
+                agent_spec : dict = yaml.safe_load(f)
                 if "model" not in agent_spec:
                     agent_spec["model"] = os.environ[
                         "AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME"
                     ]
+                agent_spec.pop("included_plugins", None)
+                
 
             if agent_spec["name"] not in agents:
                 console.print(
