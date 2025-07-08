@@ -3,16 +3,20 @@ import os
 from io import StringIO
 from subprocess import PIPE, run
 
+import yaml
+from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.monitor.opentelemetry.exporter import (
     AzureMonitorLogExporter,
     AzureMonitorMetricExporter,
     AzureMonitorTraceExporter,
 )
 from dotenv import load_dotenv
+from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import (
@@ -33,10 +37,14 @@ from opentelemetry.sdk.trace.export import (
 )
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace import set_tracer_provider
-from azure.monitor.opentelemetry import configure_azure_monitor
-from opentelemetry import trace
-from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
 from rich.logging import RichHandler
+from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.connectors.ai.function_choice_behavior import (
+    FunctionChoiceBehavior,
+)
+from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
+from semantic_kernel.functions import KernelArguments
+
 
 def load_dotenv_from_azd():
     """
@@ -190,3 +198,78 @@ def setup_telemetry(name):
     logger.info("Setting up OpenTelemetry tracer...")
     return trace.get_tracer(name)
 
+async def describe_action(kernel, settings, agent_name, message):
+    """
+    Determines the next action in an agent conversation workflow.
+
+    Args:
+        kernel: The Semantic Kernel instance
+        settings: Execution settings for the prompt
+        messages: Conversation history between agents
+
+    Returns:
+        str: A three-word summary of the next action, indicating which agent should act
+
+    This function analyzes the conversation context to determine workflow progression
+    between WRITER and CRITIC agents, with special handling for high-scoring CRITIC responses.
+    """
+    action_description = await kernel.invoke_prompt(
+        function_name="action_description",
+        prompt=f"""
+        Provided the following chat message summarize the action.
+
+        Provide a six word summary.
+        Always indicate WHO takes the action, for example: WRITER: Writes revises draft
+
+        AGENT NAME: {agent_name}
+        AGENT_MESSAGE: {message}
+        """,
+        settings=settings
+    )
+    return action_description
+
+# --------------------------------------------
+# UTILITY - CREATES an agent based on YAML definition
+# --------------------------------------------
+def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_effort=None):
+    """
+    Creates a ChatCompletionAgent from a YAML definition file.
+
+    Args:
+        kernel: The Semantic Kernel instance
+        service_id: The service ID to use for the agent
+        definition_file_path: Path to the YAML file containing agent definition
+        reasoning_effort: Optional reasoning effort parameter for OpenAI models
+
+    Returns:
+        ChatCompletionAgent: Configured agent instance
+
+    The YAML definition should include name, description, instructions,
+    temperature, and included_plugins.
+    """
+
+    with open(definition_file_path, 'r', encoding='utf-8') as file:
+        definition = yaml.safe_load(file)
+
+    settings = AzureChatPromptExecutionSettings(
+            temperature=definition.get('temperature', 0.5),
+            function_choice_behavior=FunctionChoiceBehavior.Auto(
+                filters={"included_plugins": definition.get('included_plugins', [])}
+            ))
+
+    # Resoning model specifics
+    model_id = kernel.get_service(service_id=service_id).ai_model_id
+    if model_id.lower().startswith("o"):
+        settings.temperature = None
+        settings.reasoning_effort = reasoning_effort
+
+    agent = ChatCompletionAgent(
+        service=kernel.get_service(service_id=service_id),
+        kernel=kernel,
+        arguments=KernelArguments(settings=settings),
+        name=definition['name'],
+        description=definition['description'],
+        instructions=definition['instructions']
+    )
+
+    return agent

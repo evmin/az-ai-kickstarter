@@ -1,36 +1,35 @@
-import chainlit as cl
-from azure.ai.projects.aio import AIProjectClient
-from semantic_kernel.agents import (
-    AzureAIAgent,
-    AzureAIAgentThread,
-)
-
-import os
-import json
-import logging
-from typing import ClassVar
 import datetime
-from utils.util import describe_next_action
+import logging
+import os
+from typing import ClassVar
 
-from semantic_kernel.kernel import Kernel
+import chainlit as cl
+from azure.ai.inference.aio import ChatCompletionsClient
+from azure.ai.projects.aio import AIProjectClient
+from azure.identity.aio import DefaultAzureCredential
+from opentelemetry.trace import get_tracer
+from pydantic import Field
 from semantic_kernel.agents import AgentGroupChat
-from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
 from semantic_kernel.agents.strategies import KernelFunctionSelectionStrategy
+from semantic_kernel.agents.strategies.termination.termination_strategy import (
+    TerminationStrategy,
+)
+from semantic_kernel.connectors.ai.azure_ai_inference import (
+    AzureAIInferenceChatCompletion,
+)
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
-
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.core_plugins.time_plugin import TimePlugin
-from semantic_kernel.functions import KernelPlugin, KernelFunctionFromPrompt, KernelArguments
+from semantic_kernel.functions import (
+    KernelArguments,
+    KernelFunctionFromPrompt,
+    KernelPlugin,
+)
+from semantic_kernel.kernel import Kernel
+from utils import create_agent_from_yaml, describe_action
 
-from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
-from azure.ai.inference.aio import ChatCompletionsClient
-from azure.identity.aio import DefaultAzureCredential
-
-from opentelemetry.trace import get_tracer
-
-from pydantic import Field
-from utils.util import create_agent_from_yaml
+logger = logging.getLogger(__name__)
 
 
 # This pattern demonstrates how a debate between equally skilled models
@@ -46,10 +45,6 @@ class DebateOrchestrator:
     Semantic Kernel's Agent Group Chat functionality. The debate pattern improves response
     quality by allowing specialized agents to focus on different aspects of the task.
     """
-
-    # --------------------------------------------
-    # Constructor
-    # --------------------------------------------
     def __init__(self):
         """
         Creates the DebateOrchestrator with necessary services and kernel configurations.
@@ -64,10 +59,10 @@ class DebateOrchestrator:
 
         self.logger.info("Creating - %s", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"))
 
-        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        endpoint = os.getenv("AI_FOUNDRY_ENDPOINT")
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-        executor_deployment_name = os.getenv("EXECUTOR_AZURE_OPENAI_DEPLOYMENT_NAME")
-        utility_deployment_name = os.getenv("UTILITY_AZURE_OPENAI_DEPLOYMENT_NAME")
+        executor_deployment_name = os.getenv("AI_DEPLOYMENT_NAME_EXECUTOR")
+        utility_deployment_name = os.getenv("AI_DEPLOYMENT_NAME_EXECUTOR") # TODO
 
         credential = DefaultAzureCredential()
 
@@ -108,7 +103,7 @@ class DebateOrchestrator:
     # --------------------------------------------
     # Create Agent Group Chat
     # --------------------------------------------
-    def create_agent_group_chat(self):
+    def create_agent_group_chat(self) -> AgentGroupChat:
         """
         Creates and configures an agent group chat with Writer and Critic agents.
 
@@ -119,12 +114,12 @@ class DebateOrchestrator:
 
         self.logger.debug("Creating chat")
 
-        writer = create_agent_from_yaml(service_id="executor",
-                                        kernel=self.kernel,
-                                        definition_file_path="agents/writer.yaml")
         critic = create_agent_from_yaml(service_id="executor",
                                         kernel=self.kernel,
-                                        definition_file_path="agents/critic.yaml")
+                                        definition_file_path="agents/01-debate-critic.yaml")
+        writer = create_agent_from_yaml(service_id="executor",
+                                        kernel=self.kernel,
+                                        definition_file_path="agents/02-debate-writer.yaml")
         agents=[writer, critic]
 
         agent_group_chat = AgentGroupChat(
@@ -174,25 +169,21 @@ class DebateOrchestrator:
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         session_id = f"{user_id}-{current_time}"
 
-        messages = []
-
         with tracer.start_as_current_span(session_id):
-            yield "WRITER: Prepares the initial draft"
-            async for a in agent_group_chat.invoke():
-                self.logger.info("Agent: %s", a.to_dict())
-                messages.append(a.to_dict())
-                next_action = await describe_next_action(self.kernel, self.settings_utility, messages)
-                self.logger.info("%s", next_action)
-                # Returning plain text to indicate that it is a status update
-                yield f"{next_action}"
+            async for message in agent_group_chat.invoke():
+                self.logger.debug("Agent message: %s", message.to_dict())
+                description = await describe_action(
+                    self.kernel, self.settings_utility, message.name, message.to_dict()
+                )
+                self.logger.debug("Action description: %s", description)
+                yield {"type": "status_update", "description": str(description)}
 
-        response = list(reversed([item async for item in agent_group_chat.get_chat_messages()]))
-
-        # Last writer response
-        reply = [r for r in response if r.name == "Writer"][-1].to_dict()
-
-        # Final message is formatted as JSON to indicate the final response
-        yield json.dumps(reply)
+        chat_messages = agent_group_chat.get_chat_messages()
+        await anext(chat_messages)  # ignore last message from CRITIC
+        yield {
+            "type": "final_response",
+            "content": (await anext(chat_messages)).content,
+        }
 
     # --------------------------------------------
     # Speaker Selection Strategy
@@ -278,11 +269,11 @@ class DebateOrchestrator:
             termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
                 function_name="TerminationEvaluator",
                 prompt_execution_settings=self.settings_utility,
-                prompt=fr"""
+                prompt="""
                     You are a data extraction assistant.
                     Check the provided evaluation and return the evalutation score.
                     It MUST be a single number only, for example - for 6/10 return 6.
-                    {{{{$evaluation}}}}
+                    {{$evaluation}}
                 """)
 
             async def should_agent_terminate(self, agent, history):
@@ -314,6 +305,9 @@ class DebateOrchestrator:
 
 
 class DebateProfile:
+    def __init__(self):
+        self.orchestrator = DebateOrchestrator()
+
     @property
     def name(self) -> str:
         return "Debate"
@@ -331,4 +325,14 @@ class DebateProfile:
     
 
     async def run(self, client: AIProjectClient, message: cl.Message) -> None:
-        pass  # Copy/Paste of main debate.py
+        final_step = None
+        async for step in self.orchestrator.process_conversation(
+            "default_user", # TODO
+            [{'role': 'user', 'name': 'user', 'content': message.content}],
+        ):
+            if step["type"] == "status_update":
+                await message.stream_token(f"\n* {step['description']}\n")
+            final_step = step
+
+        message.content = final_step["content"]
+        await message.update()

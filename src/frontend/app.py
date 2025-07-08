@@ -43,11 +43,11 @@ profiles = [
     DebateProfile(),
 ]
 
+
 @cl.set_chat_profiles
 async def chat_profile():
     logger.info("Loading chat profiles...")
     async with AzureAIAgent.create_client(credential=credential) as client:
-        # List all agents and log their names
         agents = [
             AIFoundryAgentProfile(agent) async for agent in client.agents.list_agents()
         ]
@@ -58,6 +58,7 @@ async def chat_profile():
                 markdown_description=agent.markdown_description
                 if agent.description
                 else "No description available.",
+                default=agent.name == "Debate",
             )
             for agent in agents + profiles
         ]
@@ -73,11 +74,13 @@ async def on_chat_start():
     cl.user_session.set("client", client)
 
     # List all Foundry agents
-    agents = [AIFoundryAgentProfile(agent) async for agent in client.agents.list_agents()]
+    agents = [
+        AIFoundryAgentProfile(agent) async for agent in client.agents.list_agents()
+    ]
     cl.user_session.set("profiles", agents + profiles)
 
     profile_name = cl.user_session.get("chat_profile")
-    message.content = f"Starting chat using agent **«{profile_name}»**."
+    message.content = f"Starting chat using profile **«{profile_name}»**."
     await message.send()
     cl.user_session.set(
         "profile",
@@ -94,7 +97,7 @@ async def on_chat_start():
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    logger.debug(f"Received message: {message.content}...")
+    logger.info(f"Received message: {message.content}...")
 
     client: AIProjectClient = cl.user_session.get("client")
     profile = cl.user_session.get("profile")
@@ -104,8 +107,12 @@ async def on_message(message: cl.Message):
             content="No profile selected or client not initialized. Please start a chat session.",
         ).send()
         return
-    with tracer.start_as_current_span("chatbot"):
-        await profile.run(client=client, message=message)
+    logger.info(f"Running profile: {profile.name}")
+    response_message = cl.Message(
+        content=f"Running profile **«{profile.name}»** with message: {message.content}"
+    )
+    await response_message.send()
+    await profile.run(client=client, message=response_message)
 
 
 @cl.on_chat_end

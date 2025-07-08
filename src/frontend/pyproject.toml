@@ -17,4 +17,8 @@ dependencies = [
     "azure-ai-projects>=1.0.0b11",
     "opentelemetry-instrumentation-openai-v2>=2.1b0",
     "azure-core-tracing-opentelemetry>=1.0.0b12",
+    "azure-ai-inference>=1.0.0b9",
 ]
+
+[tool.ruff]
+target-version = "py312"
