@@ -3,9 +3,7 @@ import logging
 import os
 from typing import ClassVar
 
-import chainlit as cl
 from azure.ai.inference.aio import ChatCompletionsClient
-from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 from opentelemetry.trace import get_tracer
 from pydantic import Field
@@ -31,7 +29,6 @@ from utils import create_agent_from_yaml, describe_action
 
 logger = logging.getLogger(__name__)
 
-
 # This pattern demonstrates how a debate between equally skilled models
 # can deliver an outcome that exceeds the capability of the model if
 # the task is handled as a single request-response in its entirety.
@@ -53,11 +50,7 @@ class DebateOrchestrator:
         configures Semantic Kernel, and prepares execution settings for the agents.
         """
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        self.logger.info("Semantic Orchestrator Handler init")
-
-        self.logger.info("Creating - %s", os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"))
+        logger.info("Semantic Kernel debate orchestrator initialization...")
 
         endpoint = os.getenv("AI_FOUNDRY_ENDPOINT")
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
@@ -112,7 +105,7 @@ class DebateOrchestrator:
                            selection strategy and termination strategy.
         """
 
-        self.logger.debug("Creating chat")
+        logger.debug("Creating chat")
 
         critic = create_agent_from_yaml(service_id="executor",
                                         kernel=self.kernel,
@@ -171,11 +164,11 @@ class DebateOrchestrator:
 
         with tracer.start_as_current_span(session_id):
             async for message in agent_group_chat.invoke():
-                self.logger.debug("Agent message: %s", message.to_dict())
+                logger.debug("Agent message: %s", message.to_dict())
                 description = await describe_action(
                     self.kernel, self.settings_utility, message.name, message.to_dict()
                 )
-                self.logger.debug("Action description: %s", description)
+                logger.debug("Action description: %s", description)
                 yield {"type": "status_update", "description": str(description)}
 
         chat_messages = agent_group_chat.get_chat_messages()
@@ -229,7 +222,7 @@ class DebateOrchestrator:
 
         # Could be lambda. Keeping as function for clarity
         def parse_selection_output(output):
-            self.logger.info("------- Speaker selected: %s", output)
+            logger.info("------- Speaker selected: %s", output)
             if output.value is not None:
                 return output.value[0].content
             return default_agent.name
@@ -280,22 +273,22 @@ class DebateOrchestrator:
                 """Terminate if the evaluation score > the passing score."""
 
                 self.iteration += 1
-                self.logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
+                logger.info(f"Iteration: {self.iteration} of {self.maximum_iterations}")
 
                 arguments = KernelArguments()
                 arguments["evaluation"] = history[-1].content
 
                 res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
-                self.logger.info(f"Critic Evaluation: {res_val}")
+                logger.info(f"Critic Evaluation: {res_val}")
 
                 try:
                     # 9 is a relatively high score. Set to 8 for stable result.
                     should_terminate = float(str(res_val)) >= 8.0
                 except ValueError:
-                    self.logger.error(f"Should terminate error: {ValueError}")
+                    logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False
 
-                self.logger.info(f"Should terminate: {should_terminate}")
+                logger.info(f"Should terminate: {should_terminate}")
                 return should_terminate
 
         return CompletionTerminationStrategy(agents=agents,
@@ -304,35 +297,3 @@ class DebateOrchestrator:
 
 
 
-class DebateProfile:
-    def __init__(self):
-        self.orchestrator = DebateOrchestrator()
-
-    @property
-    def name(self) -> str:
-        return "Debate"
-
-    @property
-    def description(self) -> str:
-        return "A profile for debating topics with multiple perspectives."
-
-    @property
-    def markdown_description(self) -> str:
-        return (
-            "**Debate Profile**: Engage in structured debates on various topics, "
-            "encouraging critical thinking and diverse viewpoints."
-        )
-    
-
-    async def run(self, client: AIProjectClient, message: cl.Message) -> None:
-        final_step = None
-        async for step in self.orchestrator.process_conversation(
-            "default_user", # TODO
-            [{'role': 'user', 'name': 'user', 'content': message.content}],
-        ):
-            if step["type"] == "status_update":
-                await message.stream_token(f"\n* {step['description']}\n")
-            final_step = step
-
-        message.content = final_step["content"]
-        await message.update()

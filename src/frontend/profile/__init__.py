@@ -6,6 +6,7 @@ from semantic_kernel.agents import (
     AzureAIAgentThread,
 )
 
+from .debate import DebateOrchestrator
 
 class AIFoundryAgentProfile:
     def __init__(self, agent: dict):
@@ -33,3 +34,36 @@ class AIFoundryAgentProfile:
         thread = response.thread
         cl.user_session.set("thread", thread)
         await cl.Message(content=response.content.content).send()
+
+class DebateProfile:
+    def __init__(self):
+        self.orchestrator = DebateOrchestrator()
+
+    @property
+    def name(self) -> str:
+        return "Debate"
+
+    @property
+    def description(self) -> str:
+        return "A profile for debating topics with multiple perspectives."
+
+    @property
+    def markdown_description(self) -> str:
+        return (
+            "**Debate Profile**: Engage in structured debates on various topics, "
+            "encouraging critical thinking and diverse viewpoints."
+        )
+    
+
+    async def run(self, client: AIProjectClient, message: cl.Message) -> None:
+        final_step = None
+        async for step in self.orchestrator.process_conversation(
+            "default_user", # TODO
+            [{'role': 'user', 'name': 'user', 'content': message.content}],
+        ):
+            if step["type"] == "status_update":
+                await message.stream_token(f"\n* {step['description']}\n")
+            final_step = step
+
+        message.content = final_step["content"]
+        await message.update()

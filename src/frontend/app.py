@@ -13,8 +13,7 @@ from semantic_kernel.agents import (
 )
 from utils import load_dotenv_from_azd, setup_telemetry
 
-from profile import AIFoundryAgentProfile
-from profile.debate import DebateProfile
+from profile import AIFoundryAgentProfile, DebateProfile
 
 load_dotenv_from_azd()
 tracer = setup_telemetry(__name__)
