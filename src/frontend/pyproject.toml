@@ -22,3 +22,16 @@ dependencies = [
 
 [tool.ruff]
 target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+pythonpath = [
+    "./",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-mock>=3.14.1",
+    "rich>=14.0.0",
+]
