@@ -5,6 +5,7 @@ from semantic_kernel.agents import (
     AzureAIAgent,
     AzureAIAgentThread,
 )
+from azure.identity.aio import DefaultAzureCredential
 
 from .debate import DebateOrchestrator
 
@@ -35,9 +36,21 @@ class AIFoundryAgentProfile:
         cl.user_session.set("thread", thread)
         await cl.Message(content=response.content.content).send()
 
+
 class DebateProfile:
-    def __init__(self):
-        self.orchestrator = DebateOrchestrator()
+    def __init__(self,
+                 endpoint: str,
+                 api_version: str,
+                 executor_deployment_name: str,
+                 utility_deployment_name: str, 
+                 credential: DefaultAzureCredential):
+        self.orchestrator = DebateOrchestrator(
+            endpoint=endpoint,
+            api_version=api_version,
+            executor_deployment_name=executor_deployment_name,
+            utility_deployment_name=utility_deployment_name,
+            credential=DefaultAzureCredential()
+        )
 
     @property
     def name(self) -> str:

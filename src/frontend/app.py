@@ -3,15 +3,15 @@ Chainlit frontend application for our multiagentic application.
 """
 
 import logging
+import os
 
 import chainlit as cl
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 from semantic_kernel.agents import (
     AzureAIAgent,
-    AzureAIAgentThread,
 )
-from utils import load_dotenv_from_azd, setup_telemetry
+from utils import load_dotenv_from_azd, setup_telemetry, get_model_deployment
 
 from profile import AIFoundryAgentProfile, DebateProfile
 
@@ -39,7 +39,13 @@ credential = DefaultAzureCredential()
 
 
 profiles = [
-    DebateProfile(),
+    DebateProfile(
+        endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
+        executor_deployment_name = get_model_deployment("gpt-4.1").name,
+        utility_deployment_name = get_model_deployment("gpt-4o-mini").name,
+        credential=credential,
+    ),
 ]
 
 

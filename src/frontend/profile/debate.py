@@ -42,7 +42,12 @@ class DebateOrchestrator:
     Semantic Kernel's Agent Group Chat functionality. The debate pattern improves response
     quality by allowing specialized agents to focus on different aspects of the task.
     """
-    def __init__(self):
+    def __init__(self,
+                 endpoint: str,
+                 api_version: str,
+                 executor_deployment_name: str,
+                 utility_deployment_name: str, 
+                 credential: DefaultAzureCredential):
         """
         Creates the DebateOrchestrator with necessary services and kernel configurations.
 
@@ -52,12 +57,10 @@ class DebateOrchestrator:
 
         logger.info("Semantic Kernel debate orchestrator initialization...")
 
-        endpoint = os.getenv("AI_FOUNDRY_ENDPOINT")
-        api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-        executor_deployment_name = get_model_deployment("gpt-4.1").name
-        utility_deployment_name = get_model_deployment("gpt-4o-mini").name
-
-        credential = DefaultAzureCredential()
+        self.endpoint = endpoint
+        self.api_version = api_version
+        self.executor_deployment_name = executor_deployment_name
+        self.utility_deployment_name = utility_deployment_name
 
         # Multi model setup - a service is an LLM in SK terms
         # Executor - gpt-4o
