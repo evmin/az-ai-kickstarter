@@ -25,7 +25,7 @@ from semantic_kernel.functions import (
     KernelPlugin,
 )
 from semantic_kernel.kernel import Kernel
-from utils import create_agent_from_yaml, describe_action
+from utils import create_agent_from_yaml, describe_action, get_model_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,8 @@ class DebateOrchestrator:
 
         endpoint = os.getenv("AI_FOUNDRY_ENDPOINT")
         api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-        executor_deployment_name = os.getenv("AI_DEPLOYMENT_NAME_EXECUTOR")
-        utility_deployment_name = os.getenv("AI_DEPLOYMENT_NAME_EXECUTOR") # TODO
+        executor_deployment_name = get_model_deployment("gpt-4.1").name
+        utility_deployment_name = get_model_deployment("gpt-4o-mini").name
 
         credential = DefaultAzureCredential()
 

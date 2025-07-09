@@ -44,7 +44,25 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 )
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.functions import KernelArguments
+from pydantic import BaseModel
+from typing import Optional, List
 
+class AzureModel(BaseModel):
+    format: str
+    name: str
+    version: str
+
+class AzureModelDeploymentSku(BaseModel):
+    capacity: int
+    name: str
+
+class AzureModelDeployment(BaseModel):
+    model: AzureModel
+    name: str
+    sku: AzureModelDeploymentSku
+    versionUpgradeOption: str
+    
+_deployments = None
 
 def load_dotenv_from_azd():
     """
@@ -53,6 +71,7 @@ def load_dotenv_from_azd():
     Attempts to retrieve environment variables using the 'azd env get-values' command.
     If unsuccessful, falls back to loading from a .env file.
     """
+    global _deployments
     result = run("azd env get-values", stdout=PIPE, stderr=PIPE, shell=True, text=True)
     if result.returncode == 0:
         logging.info("Found AZD environment. Loading...")
@@ -60,6 +79,31 @@ def load_dotenv_from_azd():
     else:
         logging.info("AZD environment not found. Trying to load from .env file...")
         load_dotenv()
+
+    deployments_data = yaml.safe_load(os.environ['AI_FOUNDRY_DEPLOYMENTS'])
+    if isinstance(deployments_data, list):
+        _deployments = [AzureModelDeployment(**item) for item in deployments_data]
+    else:
+        raise ValueError("AI_FOUNDRY_DEPLOYMENTS is not a list.")
+    
+    for deployment in _deployments:
+        logging.info(f"Loaded deployment: {deployment.name}, model:{deployment.model.name}, version:{deployment.model.version}, SKU:{deployment.sku.name}/{deployment.sku.capacity}")
+
+def get_model_deployment(model_name: str):
+    """
+    Retrieves a specific Azure model deployment by name.
+
+    Args:
+        model_name (str): The name of the model to retrieve.
+
+    Returns:
+        AzureModelDeployment: The deployment object if found, otherwise None.
+    """
+    assert _deployments is not None, "Deployments not loaded. Call load_dotenv_from_azd() first."
+    for deployment in _deployments:
+        if deployment.model.name == model_name:
+            return deployment
+    raise ValueError(f"Deployment for model '{model_name}' not found in {[dep.name for dep in _deployments]}.")
 
 telemetry_resource = Resource.create({ResourceAttributes.SERVICE_NAME: os.getenv("AZURE_RESOURCE_GROUP","ai-accelerator")})
 
