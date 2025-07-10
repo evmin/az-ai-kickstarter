@@ -32,7 +32,6 @@ def test_blog_generation(orchestrator):
         {
             "role": "user",
             "content": "A blog about cookies",
-
         }
     ]
     console = Console()
@@ -55,7 +54,7 @@ def test_blog_generation(orchestrator):
     final_response = asyncio.run(collect_chunks())
 
     assert final_response is not None
-
+    assert "01/12/2031" in final_response
 
     console.rule()
     console.print(Panel(Markdown(final_response), title="Final Response"))

@@ -51,8 +51,12 @@ param aiFoundryName string = ''
 @description('Optional. The endpoint of the AI Foundry resource to reuse. Used only if useExistingAiFoundry is true.')
 param aiFoundryEndpoint string = ''
 
-@description('Optional. The API version of the AI Foundry resource to reuse. Used only if useExistingAiFoundry is true.')
+@description('Optional. The API version of the AI Foundry resource.')
 param aiFoundryApiVersion string = ''
+
+@description('Optional. The API version of the OpenAI Foundry resource.')
+param azureOpenAiApiVersion string = ''
+
 
 @description('The AI Foundry service resource group name to reuse. Optional: Needed only if resource group is different from current resource group.')
 param aiFoundryResourceGroupName string = ''
@@ -218,6 +222,9 @@ var _aiFoundryEndpoint = useExistingAiFoundry ? aiFoundryEndpoint : aiFoundryAcc
 @description('AI Foundry API Version')
 var _aiFoundryApiVersion = empty(aiFoundryApiVersion) ? '2025-05-01-preview' : aiFoundryApiVersion
 
+@description('OpenAI API Version')
+var _azureOpenAiApiVersion = empty(azureOpenAiApiVersion) ? '2024-12-01-preview' : azureOpenAiApiVersion
+
 var _aiFoundryProjectEndpoint = 'https://${_aiFoundryAccountName}.services.ai.azure.com/api/projects/${_aiFoundryAccountProjectName}'
 
 var _azureAiSearchLocation = empty(azureAiSearchLocation) ? location : azureAiSearchLocation
@@ -376,8 +383,8 @@ resource aiFoundryAccountProject 'Microsoft.CognitiveServices/accounts/projects@
   ]
 }
 
-@description('Azure OpenAI Model Deployment Name - Executor Service')
-var _aiDeploymentNameExecutor = deployments[0].name
+@description('Azure OpenAI Model Deployment Name')
+var _aiFoundryDeploymentName = deployments[0].name
 
 var _aiFoundryApiEndpoint = aiFoundryAccount.outputs.endpoint
 
@@ -515,11 +522,11 @@ module app 'modules/app.bicep' = {
 
     aiFoundryApiEndpoint: _aiFoundryApiEndpoint
     aiFoundryApiVersion: _aiFoundryApiVersion
+    azureOpenAiApiVersion: _azureOpenAiApiVersion 
 
     aiFoundryProjectEndpoint: _aiFoundryProjectEndpoint
     aiAgentModelDeploymentName: _aiFoundryAgentModelDeploymentName
 
-    aiDeploymentNameExecutor: _aiDeploymentNameExecutor
     aiFoundryProjectConnectionString: _aiFoundryProjectEndpoint
     aiFoundryProjectName: aiFoundryAccountProject.name
   }
@@ -636,8 +643,11 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = _aiFoundryAgentModelDeploym
 @description('AI Foundry API Version - API version to use when calling AI Foundry')
 output AI_FOUNDRY_API_VERSION string = _aiFoundryApiVersion
 
-// @description('Azure OpenAI Model Deployment Name - Executor Service')
-output AI_DEPLOYMENT_NAME_EXECUTOR string = _aiDeploymentNameExecutor
+@description('Azure OpenAI API Version - API version to use when calling Azure OpenAI')
+output AZURE_OPENAI_API_VERSION string = _azureOpenAiApiVersion
+
+// @description('Azure OpenAI Default Model Deployment Name')
+output AI_FOUNDRY_DEPLOYMENT_NAME string = _aiFoundryDeploymentName
 
 @description('JSON deployment configuration for the models')
 output AI_FOUNDRY_DEPLOYMENTS object[] = deployments

@@ -51,6 +51,9 @@
     "azureAiFoundryApiVersion": {
       "value": "${AZURE_AI_FOUNDRY_API_VERSION}"
     },
+    "azureOpenAiApiVersion": {
+      "value": "${AZURE_OPENAI_API_VERSION}"
+    },
     "azureOpenAiResourceGroupName": {
       "value": "${AZURE_AI_FOUNDRY_RESOURCE_GROUP_NAME}"
     },

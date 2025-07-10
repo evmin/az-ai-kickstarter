@@ -49,12 +49,15 @@ param logAnalyticsWorkspaceResourceId string
 param aiFoundryLiveApiEndpoint string = ''
 
 @description('The Azure AI Foundry API Version to use.')
-param aiFoundryApiVersion string = ''
+param aiFoundryApiVersion string
+
+@description('The Azure OpenAI API Version to use.')
+param azureOpenAiApiVersion string
 
 @description('The endpoint of the Azure OpenAI resource to reuse. Used only if useExistingAzureOpenAi is true.')
 param aiFoundryApiEndpoint string = ''
 
-@description('The endpoint of the Azure AI FOundry Project Connection.')
+@description('The endpoint of the Azure AI Foundry Project Connection.')
 param aiFoundryProjectConnectionString string = ''
 
 @description('The Azure AI Foundry Project Name.')
@@ -65,15 +68,6 @@ param aiAgentModelDeploymentName string
 
 @description('Azure AI Foundry Project Endpoint')
 param aiFoundryProjectEndpoint string
-
-// @description('Optional. The API version of the Azure OpenAI resource to reuse. Used only if useExistingAzureOpenAi is true.')
-// param azureOpenAiApiVersion string = ''
-
-@description('Optional. The name of the Azure OpenAI deployment for the executor to reuse. Used only if useExistingAzureOpenAi is true.')
-param aiDeploymentNameExecutor string = ''
-
-// @description('Optional. The name of the Azure OpenAI deployment for the utility to reuse. Used only if useExistingAzureOpenAi is true.')
-// param utilityAzureOpenAiDeploymentName string = ''
 
 /* -------------------------------- Frontend -------------------------------- */
 
@@ -186,7 +180,7 @@ module frontendApp 'app/container-apps.bicep' = {
       AI_FOUNDRY_API_ENDPOINT: aiFoundryApiEndpoint
       AI_FOUNDRY_VOICE_LIVE_ENDPOINT: aiFoundryLiveApiEndpoint
       AI_FOUNDRY_API_VERSION: aiFoundryApiVersion
-      AI_DEPLOYMENT_NAME_EXECUTOR: aiDeploymentNameExecutor
+      AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
       AI_FOUNDRY_PROJECT_CONNECTION_STRING: aiFoundryProjectConnectionString
       AI_FOUNDRY_PROJECT_NAME: aiFoundryProjectName
 
