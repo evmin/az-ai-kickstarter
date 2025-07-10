@@ -521,6 +521,7 @@ module app 'modules/app.bicep' = {
     azurePrincipalId: azurePrincipalId
 
     aiFoundryApiEndpoint: _aiFoundryApiEndpoint
+    aiFoundryDeployments: deployments
     aiFoundryApiVersion: _aiFoundryApiVersion
     azureOpenAiApiVersion: _azureOpenAiApiVersion 
 

@@ -32,6 +32,8 @@ RUN uv sync \
 
 COPY app.py /app/
 COPY utils.py /app/
+COPY profile /app/profile
+COPY agents /app/agents
 COPY .chainlit/config.toml /app/.chainlit/
 
 ###############

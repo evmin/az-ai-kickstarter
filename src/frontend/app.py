@@ -21,23 +21,6 @@ logger = logging.getLogger(__name__)
 
 credential = DefaultAzureCredential()
 
-# profiles = []
-
-# for profile in Path(__file__).parent.joinpath("profile").glob("*.py"):
-#     profile_name = profile.stem
-#     if profile_name == "__init__":
-#         continue
-#     logger.info(f"Loading chat profile: '{profile_name}'")
-#     profile_module = __import__(f"profile.{profile_name}", fromlist=[""])
-#     class_name = f"{profile_name.capitalize()}Profile"
-#     profile_class = getattr(profile_module, class_name, None)
-#     if not profile_class:
-#         raise ValueError(
-#             f"Profile class {class_name} not found in {profile_name}.py"
-#         )
-#     profiles.append(profile_class())
-
-
 profiles = [
     DebateProfile(
         endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
@@ -47,7 +30,6 @@ profiles = [
         credential=credential,
     ),
 ]
-
 
 @cl.set_chat_profiles
 async def chat_profile():

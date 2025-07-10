@@ -1,5 +1,8 @@
+import binascii
 import logging
 import os
+import base64
+import json
 from io import StringIO
 from subprocess import PIPE, run
 
@@ -45,7 +48,6 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettings
 from semantic_kernel.functions import KernelArguments
 from pydantic import BaseModel
-from typing import Optional, List
 
 class AzureModel(BaseModel):
     format: str
@@ -80,11 +82,15 @@ def load_dotenv_from_azd():
         logging.info("AZD environment not found. Trying to load from .env file...")
         load_dotenv()
 
-    deployments_data = yaml.safe_load(os.environ['AI_FOUNDRY_DEPLOYMENTS'])
-    if isinstance(deployments_data, list):
-        _deployments = [AzureModelDeployment(**item) for item in deployments_data]
-    else:
-        raise ValueError("AI_FOUNDRY_DEPLOYMENTS is not a list.")
+    deployments_data = os.environ['AI_FOUNDRY_DEPLOYMENTS']
+    
+    try:
+        # Try to decode as base64 first (for deployed environments)
+        deployments_data = base64.b64decode(deployments_data).decode('utf-8')
+    except binascii.Error:
+        pass
+    deployments_data = json.loads(deployments_data)
+    _deployments = [AzureModelDeployment(**item) for item in deployments_data]
     
     for deployment in _deployments:
         logging.info(f"Loaded deployment: {deployment.name}, model:{deployment.model.name}, version:{deployment.model.version}, SKU:{deployment.sku.name}/{deployment.sku.capacity}")
