@@ -1,4 +1,5 @@
 import chainlit as cl
+import datetime
 from azure.ai.projects.aio import AIProjectClient
 from opentelemetry.trace import get_tracer
 from semantic_kernel.agents import (
@@ -8,6 +9,7 @@ from semantic_kernel.agents import (
 from azure.identity.aio import DefaultAzureCredential
 
 from .debate import DebateOrchestrator
+
 
 class AIFoundryAgentProfile:
     def __init__(self, agent: dict):
@@ -30,7 +32,9 @@ class AIFoundryAgentProfile:
         thread: AzureAIAgentThread = cl.user_session.get("thread", None)
         tracer = get_tracer(__name__)
 
-        with tracer.start_as_current_span(thread.id):
+        with tracer.start_as_current_span(
+            agent.id + "-" + datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        ):
             response = await agent.get_response(messages=message.content, thread=thread)
         thread = response.thread
         cl.user_session.set("thread", thread)
@@ -38,18 +42,20 @@ class AIFoundryAgentProfile:
 
 
 class DebateProfile:
-    def __init__(self,
-                 endpoint: str,
-                 api_version: str,
-                 executor_deployment_name: str,
-                 utility_deployment_name: str, 
-                 credential: DefaultAzureCredential):
+    def __init__(
+        self,
+        endpoint: str,
+        api_version: str,
+        executor_deployment_name: str,
+        utility_deployment_name: str,
+        credential: DefaultAzureCredential,
+    ):
         self.orchestrator = DebateOrchestrator(
             endpoint=endpoint,
             api_version=api_version,
             executor_deployment_name=executor_deployment_name,
             utility_deployment_name=utility_deployment_name,
-            credential=DefaultAzureCredential()
+            credential=credential,
         )
 
     @property
@@ -66,13 +72,12 @@ class DebateProfile:
             "**Debate Profile**: Engage in structured debates on various topics, "
             "encouraging critical thinking and diverse viewpoints."
         )
-    
 
     async def run(self, client: AIProjectClient, message: cl.Message) -> None:
         final_step = None
         async for step in self.orchestrator.process_conversation(
-            "default_user", # TODO
-            [{'role': 'user', 'name': 'user', 'content': message.content}],
+            "default_user",  # TODO
+            [{"role": "user", "name": "user", "content": message.content}],
         ):
             if step["type"] == "status_update":
                 await message.stream_token(f"\n* {step['description']}\n")
