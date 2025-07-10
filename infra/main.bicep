@@ -386,8 +386,6 @@ resource aiFoundryAccountProject 'Microsoft.CognitiveServices/accounts/projects@
 @description('Azure OpenAI Model Deployment Name')
 var _aiFoundryDeploymentName = deployments[0].name
 
-var _aiFoundryApiEndpoint = aiFoundryAccount.outputs.endpoint
-
 // ------------------------------ Storage Account ------------------------------
 module storageAccount 'br/public:avm/res/storage/storage-account:0.19.0' = {
   name: '${deployment().name}-storageAccount'
@@ -520,7 +518,7 @@ module app 'modules/app.bicep' = {
     useAuthentication: useAuthentication
     azurePrincipalId: azurePrincipalId
 
-    aiFoundryApiEndpoint: _aiFoundryApiEndpoint
+    aiFoundryEndpoint: _aiFoundryEndpoint
     aiFoundryDeployments: deployments
     aiFoundryApiVersion: _aiFoundryApiVersion
     azureOpenAiApiVersion: _azureOpenAiApiVersion 

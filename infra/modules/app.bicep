@@ -54,8 +54,8 @@ param aiFoundryApiVersion string
 @description('The Azure OpenAI API Version to use.')
 param azureOpenAiApiVersion string
 
-@description('The endpoint of the Azure OpenAI resource to reuse. Used only if useExistingAzureOpenAi is true.')
-param aiFoundryApiEndpoint string = ''
+@description('The endpoint of the Azure OpenAI resource to reuse.')
+param aiFoundryEndpoint string = ''
 
 @description('The endpoint of the Azure AI Foundry Project Connection.')
 param aiFoundryProjectConnectionString string = ''
@@ -180,7 +180,7 @@ module frontendApp 'app/container-apps.bicep' = {
       // Required for managed identity
       AZURE_CLIENT_ID: appIdentity.properties.clientId
 
-      AI_FOUNDRY_API_ENDPOINT: aiFoundryApiEndpoint
+      AI_FOUNDRY_ENDPOINT: aiFoundryEndpoint
       AI_FOUNDRY_VOICE_LIVE_ENDPOINT: aiFoundryLiveApiEndpoint
       AI_FOUNDRY_API_VERSION: aiFoundryApiVersion
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
