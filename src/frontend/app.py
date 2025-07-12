@@ -96,10 +96,10 @@ async def on_message(message: cl.Message):
         return
     logger.info(f"Running profile: {profile.name}")
     response_message = cl.Message(
-        content=f"Running profile **«{profile.name}»** with message: {message.content}"
+        content=f"Running profile **«{profile.name}»** with message: «{message.content}»."
     )
     await response_message.send()
-    await profile.run(client=client, message=response_message)
+    await profile.run(client=client, message=message, response=response_message)
 
 
 @cl.on_chat_end

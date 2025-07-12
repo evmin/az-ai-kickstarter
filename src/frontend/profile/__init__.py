@@ -27,18 +27,23 @@ class AIFoundryAgentProfile:
     def markdown_description(self) -> str:
         return f"**Foundry Agent**: {self.description or 'No description available.'}"
 
-    async def run(self, client: AIProjectClient, message: cl.Message) -> AzureAIAgent:
+    async def run(
+        self, client: AIProjectClient, message: cl.Message, response: cl.Message
+    ) -> None:
         agent = AzureAIAgent(client=client, definition=self.agent)
         thread: AzureAIAgentThread = cl.user_session.get("thread", None)
+        if not thread:
+            thread = await client.agents.threads.create_thread(agent_id=agent.id)
+            cl.user_session.set("thread", thread)
+        
         tracer = get_tracer(__name__)
+        with tracer.start_as_current_span(agent.id):
+            agent_response = await agent.get_response(
+                messages=message.content, thread=thread
+            )
 
-        with tracer.start_as_current_span(
-            agent.id + "-" + datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        ):
-            response = await agent.get_response(messages=message.content, thread=thread)
-        thread = response.thread
-        cl.user_session.set("thread", thread)
-        await cl.Message(content=response.content.content).send()
+        response.content = agent_response.content.content
+        await response.update()
 
 
 class DebateProfile:
@@ -73,15 +78,17 @@ class DebateProfile:
             "encouraging critical thinking and diverse viewpoints."
         )
 
-    async def run(self, client: AIProjectClient, message: cl.Message) -> None:
+    async def run(
+        self, client: AIProjectClient, message: cl.Message, response: cl.Message
+    ) -> None:
         final_step = None
         async for step in self.orchestrator.process_conversation(
             "default_user",  # TODO
             [{"role": "user", "name": "user", "content": message.content}],
         ):
             if step["type"] == "status_update":
-                await message.stream_token(f"\n* {step['description']}\n")
+                await response.stream_token(f"\n* {step['description']}\n")
             final_step = step
 
-        message.content = final_step["content"]
-        await message.update()
+        response.content = final_step["content"]
+        await response.update()
