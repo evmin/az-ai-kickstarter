@@ -32,15 +32,13 @@ class AIFoundryAgentProfile:
     ) -> None:
         agent = AzureAIAgent(client=client, definition=self.agent)
         thread: AzureAIAgentThread = cl.user_session.get("thread", None)
-        if not thread:
-            thread = await client.agents.threads.create_thread(agent_id=agent.id)
-            cl.user_session.set("thread", thread)
         
         tracer = get_tracer(__name__)
-        with tracer.start_as_current_span(agent.id):
+        with tracer.start_as_current_span(agent.id + "-" + datetime.datetime.now().isoformat()):
             agent_response = await agent.get_response(
                 messages=message.content, thread=thread
             )
+        cl.user_session.set("thread", agent_response.thread)
 
         response.content = agent_response.content.content
         await response.update()
