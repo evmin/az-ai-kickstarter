@@ -131,23 +131,9 @@ Summary: Rejected due to the constraint on the front end.
 
 ## Decision
 
-We are using [Azure Container
-Apps](https://learn.microsoft.com/en-us/azure/container-apps/overview) as it is
-right now the simplest to use. However, it is mostly a tie with [Azure
-AppService](https://learn.microsoft.com/en-us/azure/app-service/). Initial
-decision is to go with the simplest hosting solution but keep the door open for
-[Azure AppService](https://learn.microsoft.com/en-us/azure/app-service/) and
-[Azure Kubernetes
-Service](https://learn.microsoft.com/en-us/azure/aks/what-is-aks). We are doing
-so by ensuring the produced containers are independent from the _hosting_
-solution. This is a good property to have for our solutions anyways as it makes
-it easier to deploy them in additional environments. 
+We are using [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/overview) as it is right now the simplest to use. However, it is mostly a tie with [Azure AppService](https://learn.microsoft.com/en-us/azure/app-service/). Initial decision is to go with the simplest hosting solution but keep the door open for [Azure AppService](https://learn.microsoft.com/en-us/azure/app-service/) and [Azure Kubernetes Service](https://learn.microsoft.com/en-us/azure/aks/what-is-aks). We are doing so by ensuring the produced containers are independent from the _hosting_ solution. This is a good property to have for our solutions anyways as it makes it easier to deploy them in additional environments. 
 
-ACA is _opinionated_ about how to run _Containers. There is less choice in the
-way workloads can be deployed. However, we did not identify any case where this
-would limit the solutions as we envision then today. Potential future needs did
-not outweight the increased complexitiy of AKS for the simple deployments we
-envision now.
+ACA is _opinionated_ about how to run _Containers. There is less choice in the way workloads can be deployed. However, we did not identify any case where this would limit the solutions as we envision then today. Potential future needs did not outweight the increased complexitiy of AKS for the simple deployments we envision now.
 
 ## Consequences
 

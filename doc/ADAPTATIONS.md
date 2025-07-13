@@ -1,21 +1,19 @@
-# Instructions for adapations to difference environments
+# How to use in different environments
 
 ## Using pip for Python requirements 
 
 
 ### Generate requirements.txt files from uv
 
-To generate `pip` `requirements.txt` files for both _frontend_ and _backend_ use the following commands:
+To generate a `pip`-compatible `requirements.txt` file for the _frontend_
+project use the command below. A separate *backend* project no longer exists
+in this repository, therefore the corresponding snippet has been removed.
 
 
 ```bash
-uv pip compile --project src/frontend src/frontend/pyproject.toml --no-deps | `
-    grep -v '# via' | `
-    grep -v ipykernel > src/frontend/requirements.txt 
-
-uv pip compile --project src/backend src/backend/pyproject.toml --no-deps | `
-    grep -v '# via' | `
-    grep -v ipykernel > src/backend/requirements.txt
+uv pip compile --project src/frontend src/frontend/pyproject.toml --no-deps | \
+    grep -v '# via' | \
+    grep -v ipykernel > src/frontend/requirements.txt
 ```
 
 ### Create virtual environments and install
@@ -23,36 +21,22 @@ uv pip compile --project src/backend src/backend/pyproject.toml --no-deps | `
 #### Bash/Zsh
 
 ```bash
-cd src/frontend 
+cd src/frontend
 python -m venv .venv
-. .venv/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-```bash
-cd src/backend 
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### In Powershell
+#### PowerShell
 
 ```pwsh
-cd src\frontend 
+cd src\frontend
 python -m venv .venv
 . .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-```pwsh
-cd src\backend 
-python -m venv .venv
-. .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+### Use .env files rather than an AZD environment
 
-### Use .env files rather than AZD environement
-
-In both `src/backend` and `src/frontend` copy the `sample.env` files into `.env` 
-files and manually fill the variables. Optional fields are documented.
+Copy the `sample.env` file (if present) in `src/frontend` to `.env` and fill in
+the required variables. Optional fields are documented inside the file.
