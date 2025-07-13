@@ -6,11 +6,20 @@ ToC: [**USER STORY**](#azure-ai-app-kickstarter) \| [**GETTING STARTED**](#getti
 
 An opinionated set of best practices and patterns to bootstrap your Multi Agent application in minutes.
 
-#### Infrasturcture architechture
+#### Architechture
 
 <img src="doc/images/arch-infra.png" alt="High level Kickstarter architecture - infra view" width="800">
 
-#### Application architecture
+#### Architecture Description
+
+Application is using **[Chainlit](https://docs.chainlit.io/)** as the frontend framework and relies on **[Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/)** for the cognitive architecture.
+
+The two ways to use the application:
+
+* Chat with an agent defined in **[AI Foundry Agent Service](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview)**
+* Chat with multi agent **Debate** pattern defined within Semantic Kernel
+
+### Debate Pattern Architecture
 
 <img src="doc/images/arch-app.png" alt="Kickstarter cognitive architecture - app view" width="800">
 
@@ -36,11 +45,11 @@ This respository has been configured to support GitHub Codespace and DevContaine
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/evmin/az-ai-kickstarter) [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/evmin/az-ai-kickstarter)
 
 > [!WARNING]
-> Do NOT `git clone` the application under Windows and then open a DevContainer. 
-> This would create issues with file end of lines. For DevContainer click on the button 
-> above and let Visual Studio Code download the repository for you. Alternatively you 
-> can also `git clone` under Windows Subsystem for Linux (WSL) and ask Visual Studio Code to
-> `Re-Open in Container`.
+> **DO NOT** `git clone` the application under Windows and then open a DevContainer. This would create issues with file end of lines. 
+> 
+> **For DevContainer** click on the button above and let Visual Studio Code download the repository for you. 
+> 
+> Alternatively you can also `git clone` under **Windows Subsystem for Linux** (WSL) and ask Visual Studio Code to`Re-Open in Container`.
 
 ### Dependencies
 
@@ -66,53 +75,44 @@ customize the deployment
 To deploy Azure AI App Kickstarter just run: 
 ```bash
 azd up
-``` 
+```
 > [!WARNING]
 > This deploys the application with authentication DISABLED.
 
 ## How it works
 
-### Running the frontend 
+### Running locally
 
 ```bash
 cd src/frontend
 uv sync
-uv run streamlit app.py
+uv run chainlit run app.py -w
 ```
-### Running the backend
-
-  ```bash
-  # Sync Python dependencies
-  uv sync
-  # Start the backend server with live reloading
-  uv run uvicorn app:app --reload
-  ```
 
 ### Tracing
 
 The AI Traces you will be able to find in AI Foundry Project under "Tracing".
-If you click on one of the traces you will see a detailed history view with every agent,
-prompt, etc.:
+If you click on one of the traces you will see a detailed history view with every agent, prompt, etc. 
+
+For example, Debate Pattern tracing:
+
 <img src="doc/images/tracing.png" alt="Azure AI Foundry Portal Trace Detail" width="800">
 
 ### Accessing logs of Azure Container Apps
 
-If you need to troubleshoot and access the logs of the containers running in Azure Container 
-apps you can use this helper script (`bash` only). It will connect to Azure remotely and 
-stream the logs to your local terminal.
+Use `az containerapp logs` (or the Azure Portal) to inspect logs of the deployed Container App. 
 
-For the Frontend:
+Example:
+
 ```bash
-./scripts/aca_logs.sh frontend
+eval $(azd env get-values)
+az containerapp logs show \
+   --name ca-frontend-$AZURE_ENV_NAME \
+   --resource-group $AZURE_RESOURCE_GROUP \
+   --follow
 ```
 
-For the Backend:
-```bash
-./scripts/aca_logs.sh backend
-```
-
-Logs will be streamed to your terminal:
-<img src="doc/images/logging.png" alt="Semantic Kernel Logs" width="800">
+<img src="doc/images/logging.png" alt="Azure AI Foundry Portal Trace Detail" width="800">
 
 ## Code of Conduct
 

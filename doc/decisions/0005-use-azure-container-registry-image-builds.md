@@ -30,7 +30,7 @@ services:
     host: containerapp
     docker:
       path: ./Dockerfile
-#      remoteBuild: true
+     remoteBuild: true
 ```
 
 
