@@ -184,7 +184,7 @@ module frontendApp 'app/container-apps.bicep' = {
       AI_FOUNDRY_VOICE_LIVE_ENDPOINT: aiFoundryLiveApiEndpoint
       AI_FOUNDRY_API_VERSION: aiFoundryApiVersion
       AZURE_OPENAI_API_VERSION: azureOpenAiApiVersion
-      AI_FOUNDRY_PROJECT_CONNECTION_STRING: aiFoundryProjectConnectionString
+      AZURE_AI_FOUNDRY_PROJECT_ENDPOINT: aiFoundryProjectConnectionString
       AI_FOUNDRY_PROJECT_NAME: aiFoundryProjectName
       AI_FOUNDRY_DEPLOYMENTS: base64(string(aiFoundryDeployments)) // This is a Base64 encoded JSON string of the deployments object (see deployments.yaml)
 

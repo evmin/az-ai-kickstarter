@@ -225,7 +225,7 @@ var _aiFoundryApiVersion = empty(aiFoundryApiVersion) ? '2025-05-01-preview' : a
 @description('OpenAI API Version')
 var _azureOpenAiApiVersion = empty(azureOpenAiApiVersion) ? '2024-12-01-preview' : azureOpenAiApiVersion
 
-var _aiFoundryProjectEndpoint = 'https://${_aiFoundryAccountName}.services.ai.azure.com/api/projects/${_aiFoundryAccountProjectName}'
+var _aiFoundryProjectEndpoint = aiFoundryAccountProject.properties.endpoints['AI Foundry API']
 
 var _azureAiSearchLocation = empty(azureAiSearchLocation) ? location : azureAiSearchLocation
 var _azureAiSearchEndpoint = 'https://${_azureAiSearchName}.search.windows.net'
@@ -612,18 +612,15 @@ output AZURE_CLIENT_APP_ID string = authClientAppId
 
 /* -------------------------- Azure AI Foundry ----------------------------- */
 
-// TODO: decide between the two names
-@description('Azure AI Project connection string')
-output AI_FOUNDRY_PROJECT_CONNECTION_STRING string = _aiFoundryProjectEndpoint
-
 @description('Azure AI Project Endpoint')
 output AI_FOUNDRY_PROJECT_ENDPOINT string = _aiFoundryProjectEndpoint
 
-// TODO: review
-@description('Azure AI Foundry Project Endpoints - Endpoints for the AI Foundry Project')
-output AZURE_AI_FOUNDRY_PROJECT_ENDPOINTS object = aiFoundryAccountProject.properties.endpoints
+@description('Azure AI Foundry Project Endpoins - Endpoint for the AI Foundry Project')
+output AZURE_AI_FOUNDRY_PROJECT_ENDPOINT string = aiFoundryAccountProject.properties.endpoints['AI Foundry API']
 
 @description('Azure AI Foundry Project Endpoint - Base URL for API calls to AI Foundry Project')
+// Duplicate of AI_FOUNDRY_PROJECT_ENDPOINT because it is used by SK; 
+// https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-types/azure-ai-agent
 output AZURE_AI_AGENT_ENDPOINT string = _aiFoundryProjectEndpoint
 
 @description('AI Foundry service name')
