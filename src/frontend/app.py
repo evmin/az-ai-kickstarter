@@ -13,7 +13,7 @@ from semantic_kernel.agents import (
 )
 from utils import load_dotenv_from_azd, setup_telemetry, get_model_deployment
 
-from profile import AIFoundryAgentProfile, DebateProfile
+from profile import AIFoundryAgentProfile, DebateProfile, FoundryDebateProfile
 
 load_dotenv_from_azd()
 tracer = setup_telemetry(__name__)
@@ -21,33 +21,49 @@ logger = logging.getLogger(__name__)
 
 credential = DefaultAzureCredential()
 
-profiles = [
-    DebateProfile(
-        endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
-        api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
-        executor_deployment_name = get_model_deployment("gpt-4.1").name,
-        utility_deployment_name = get_model_deployment("gpt-4o-mini").name,
-        credential=credential,
-    ),
-]
+profiles = []
 
 @cl.set_chat_profiles
 async def chat_profile():
     logger.info("Loading chat profiles...")
     async with AzureAIAgent.create_client(credential=credential) as client:
-        agents = [
-            AIFoundryAgentProfile(agent) async for agent in client.agents.list_agents()
+        azure_ai_agents = [agent async for agent in client.agents.list_agents()]
+        global profiles
+        profiles = [
+            AIFoundryAgentProfile(agent) for agent in azure_ai_agents
         ]
-        logger.info(f"Found {len(agents)} agents")
+        profiles.append(
+            DebateProfile(
+                endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
+                api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
+                executor_deployment_name = get_model_deployment("gpt-4.1").name,
+                utility_deployment_name = get_model_deployment("gpt-4o-mini").name,
+                credential=credential,
+            ),            
+        )
+        profiles.append(
+            FoundryDebateProfile(
+                endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
+                api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
+                deployment_name = get_model_deployment("gpt-4.1").name,        
+                credential=credential,
+                agent_definitions=[
+                    definition
+                    async for definition in client.agents.list_agents()
+                    if definition.name in ["Writer", "Critic"]
+                ],
+            ),
+        )
+        logger.info(f"Found {len(profiles)} profiles")
         return [
             cl.ChatProfile(
-                name=agent.name,
-                markdown_description=agent.markdown_description
-                if agent.description
+                name=profile.name,
+                markdown_description=profile.markdown_description
+                if profile.description
                 else "No description available.",
-                default=agent.name == "Debate",
+                default=profile.name == "Debate",
             )
-            for agent in agents + profiles
+            for profile in profiles
         ]
 
 
@@ -61,10 +77,7 @@ async def on_chat_start():
     cl.user_session.set("client", client)
 
     # List all Foundry agents
-    agents = [
-        AIFoundryAgentProfile(agent) async for agent in client.agents.list_agents()
-    ]
-    cl.user_session.set("profiles", agents + profiles)
+    cl.user_session.set("profiles", profiles)
 
     profile_name = cl.user_session.get("chat_profile")
     message.content = f"Starting chat using profile **«{profile_name}»**."
@@ -74,7 +87,7 @@ async def on_chat_start():
         next(
             (
                 profile
-                for profile in (agents + profiles)
+                for profile in profiles
                 if profile.name == profile_name
             ),
             None,

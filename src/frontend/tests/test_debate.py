@@ -16,16 +16,21 @@ from azure.identity.aio import DefaultAzureCredential
 # Initialize environment and logging
 load_dotenv_from_azd()
 
+
 @pytest.fixture()
 def orchestrator(mocker):
-    mocker.patch('semantic_kernel.core_plugins.time_plugin.TimePlugin.date', return_value="Sunday, 12 January, 2031")
-    return DebateOrchestrator(
-        endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
-        api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
-        executor_deployment_name = get_model_deployment("gpt-4.1").name,
-        utility_deployment_name = get_model_deployment("gpt-4o-mini").name,
-        credential=DefaultAzureCredential(),        
+    mocker.patch(
+        "semantic_kernel.core_plugins.time_plugin.TimePlugin.date",
+        return_value="Sunday, 12 January, 2031",
     )
+    return DebateOrchestrator(
+        endpoint=os.getenv("AI_FOUNDRY_ENDPOINT"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        executor_deployment_name=get_model_deployment("gpt-4.1").name,
+        utility_deployment_name=get_model_deployment("gpt-4o-mini").name,
+        credential=DefaultAzureCredential(),
+    )
+
 
 def test_blog_generation(orchestrator):
     conversation_messages = [

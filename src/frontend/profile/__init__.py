@@ -1,5 +1,6 @@
 import chainlit as cl
 import datetime
+from azure.ai.agents.models import Agent
 from azure.ai.projects.aio import AIProjectClient
 from opentelemetry.trace import get_tracer
 from semantic_kernel.agents import (
@@ -9,6 +10,7 @@ from semantic_kernel.agents import (
 from azure.identity.aio import DefaultAzureCredential
 
 from .debate import DebateOrchestrator
+from .foundry_debate import FoundryDebateOrchestrator
 
 
 class AIFoundryAgentProfile:
@@ -90,3 +92,54 @@ class DebateProfile:
 
         response.content = final_step["content"]
         await response.update()
+
+class FoundryDebateProfile:
+    def __init__(
+        self,
+        endpoint: str,
+        api_version: str,
+        deployment_name: str,
+        agent_definitions: list[Agent],
+        credential: DefaultAzureCredential,
+    ):
+        self.orchestrator = FoundryDebateOrchestrator(
+            endpoint=endpoint,
+            api_version=api_version,
+            deployment_name=deployment_name,
+            credential=credential,
+            agent_definitions=agent_definitions,
+        )
+        self.credentials = credential
+
+    @property
+    def name(self) -> str:
+        return "FoundryDebate"
+
+    @property
+    def description(self) -> str:
+        return "A profile for debating topics with multiple perspectives."
+
+    @property
+    def markdown_description(self) -> str:
+        return (
+            "**Foundry Debate Profile**: Engage in structured debates on various topics, "
+            "encouraging critical thinking and diverse viewpoints. Using Foundry Agent Service agents."
+        )
+
+    async def run(
+        self, client: AIProjectClient, message: cl.Message, response: cl.Message
+    ) -> None:
+        final_step = None
+        # See https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-types/azure-ai-agent
+        async with AzureAIAgent.create_client(credential=self.credentials) as project_client:
+            async for step in self.orchestrator.process_conversation(
+                project_client=project_client,
+                user_id="default_user",  # TODO
+                conversation_messages=[{"role": "user", "name": "user", "content": message.content}],
+            ):
+                if step["type"] == "status_update":
+                    await response.stream_token(f"\n* {step['description']}\n")
+                final_step = step
+
+            response.content = final_step["content"]
+            await response.update()
