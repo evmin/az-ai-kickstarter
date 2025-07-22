@@ -8,6 +8,7 @@ from semantic_kernel.agents import (
     AzureAIAgentThread,
 )
 from azure.identity.aio import DefaultAzureCredential
+from semantic_kernel.contents import ChatMessageContent
 
 from .debate import DebateOrchestrator
 from .foundry_debate import FoundryDebateOrchestrator
@@ -34,9 +35,11 @@ class AIFoundryAgentProfile:
     ) -> None:
         agent = AzureAIAgent(client=client, definition=self.agent)
         thread: AzureAIAgentThread = cl.user_session.get("thread", None)
-        
+
         tracer = get_tracer(__name__)
-        with tracer.start_as_current_span(agent.id + "-" + datetime.datetime.now().isoformat()):
+        with tracer.start_as_current_span(
+            agent.id + "-" + datetime.datetime.now().isoformat()
+        ):
             agent_response = await agent.get_response(
                 messages=message.content, thread=thread
             )
@@ -93,6 +96,7 @@ class DebateProfile:
         response.content = final_step["content"]
         await response.update()
 
+
 class FoundryDebateProfile:
     def __init__(
         self,
@@ -129,17 +133,26 @@ class FoundryDebateProfile:
     async def run(
         self, client: AIProjectClient, message: cl.Message, response: cl.Message
     ) -> None:
-        final_step = None
+        async def call_back(message: ChatMessageContent) -> None:
+            # await response.stream_token(f"**{message.name}**\n{message.content}")
+            async with cl.Step(name=f"Agent {message.name}") as step:
+                step.output = message.content
+
         # See https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-types/azure-ai-agent
-        async with AzureAIAgent.create_client(credential=self.credentials) as project_client:
-            async for step in self.orchestrator.process_conversation(
+        async with AzureAIAgent.create_client(
+            credential=self.credentials
+        ) as project_client:
+            final_message = await self.orchestrator.process_conversation(
                 project_client=project_client,
                 user_id="default_user",  # TODO
-                conversation_messages=[{"role": "user", "name": "user", "content": message.content}],
-            ):
-                if step["type"] == "status_update":
-                    await response.stream_token(f"\n* {step['description']}\n")
-                final_step = step
+                conversation_messages=[
+                    {"role": "user", "name": "user", "content": message.content}
+                ],
+                agent_response_callback=call_back,
+            )
 
-            response.content = final_step["content"]
-            await response.update()
+            final_response = cl.Message(
+                content=final_message.content,
+                author=final_message.name,
+            )
+            await final_response.send()

@@ -25,9 +25,10 @@ from semantic_kernel.functions import (
     KernelPlugin,
 )
 from semantic_kernel.kernel import Kernel
-from utils import create_agent_from_yaml, describe_action, get_model_deployment
+from utils import create_agent_from_yaml, describe_action
 
 logger = logging.getLogger(__name__)
+
 
 # This pattern demonstrates how a debate between equally skilled models
 # can deliver an outcome that exceeds the capability of the model if
@@ -42,12 +43,15 @@ class DebateOrchestrator:
     Semantic Kernel's Agent Group Chat functionality. The debate pattern improves response
     quality by allowing specialized agents to focus on different aspects of the task.
     """
-    def __init__(self,
-                 endpoint: str,
-                 api_version: str,
-                 executor_deployment_name: str,
-                 utility_deployment_name: str, 
-                 credential: DefaultAzureCredential):
+
+    def __init__(
+        self,
+        endpoint: str,
+        api_version: str,
+        executor_deployment_name: str,
+        utility_deployment_name: str,
+        credential: DefaultAzureCredential,
+    ):
         """
         Creates the DebateOrchestrator with necessary services and kernel configurations.
 
@@ -73,7 +77,8 @@ class DebateOrchestrator:
                 api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
-            ))
+            ),
+        )
 
         utility_service = AzureAIInferenceChatCompletion(
             ai_model_id="utility",
@@ -83,16 +88,24 @@ class DebateOrchestrator:
                 api_version=api_version,
                 credential=credential,
                 credential_scopes=["https://cognitiveservices.azure.com/.default"],
-            ))
+            ),
+        )
 
         self.kernel = Kernel(
             services=[executor_service, utility_service],
             plugins=[
-                KernelPlugin.from_object(plugin_instance=TimePlugin(), plugin_name="time")
-            ])
+                KernelPlugin.from_object(
+                    plugin_instance=TimePlugin(), plugin_name="time"
+                )
+            ],
+        )
 
-        self.settings_executor = AzureChatPromptExecutionSettings(service_id="executor", temperature=0)
-        self.settings_utility = AzureChatPromptExecutionSettings(service_id="utility", temperature=0)
+        self.settings_executor = AzureChatPromptExecutionSettings(
+            service_id="executor", temperature=0
+        )
+        self.settings_utility = AzureChatPromptExecutionSettings(
+            service_id="utility", temperature=0
+        )
 
         self.resourceGroup = os.getenv("AZURE_RESOURCE_GROUP")
 
@@ -110,20 +123,25 @@ class DebateOrchestrator:
 
         logger.debug("Creating chat")
 
-        critic = create_agent_from_yaml(service_id="executor",
-                                        kernel=self.kernel,
-                                        definition_file_path="agents/01-debate-critic.yaml")
-        writer = create_agent_from_yaml(service_id="executor",
-                                        kernel=self.kernel,
-                                        definition_file_path="agents/02-debate-writer.yaml")
-        agents=[writer, critic]
+        critic = create_agent_from_yaml(
+            service_id="executor",
+            kernel=self.kernel,
+            definition_file_path="agents/01-debate-critic.yaml",
+        )
+        writer = create_agent_from_yaml(
+            service_id="executor",
+            kernel=self.kernel,
+            definition_file_path="agents/02-debate-writer.yaml",
+        )
+        agents = [writer, critic]
 
         agent_group_chat = AgentGroupChat(
-                agents=agents,
-                selection_strategy=self.create_selection_strategy(agents, critic),
-                termination_strategy = self.create_termination_strategy(
-                                         agents=[critic],
-                                         maximum_iterations=6))
+            agents=agents,
+            selection_strategy=self.create_selection_strategy(agents, critic),
+            termination_strategy=self.create_termination_strategy(
+                agents=[critic], maximum_iterations=6
+            ),
+        )
 
         return agent_group_chat
 
@@ -151,10 +169,13 @@ class DebateOrchestrator:
         # Load chat history
         chat_history = [
             ChatMessageContent(
-                role=AuthorRole(d.get('role')),
-                name=d.get('name'),
-                content=d.get('content')
-            ) for d in filter(lambda m: m['role'] in ("assistant", "user"), conversation_messages)
+                role=AuthorRole(d.get("role")),
+                name=d.get("name"),
+                content=d.get("content"),
+            )
+            for d in filter(
+                lambda m: m["role"] in ("assistant", "user"), conversation_messages
+            )
         ]
 
         await agent_group_chat.add_chat_messages(chat_history)
@@ -199,12 +220,14 @@ class DebateOrchestrator:
         Returns:
             KernelFunctionSelectionStrategy: A strategy for selecting the next speaker.
         """
-        definitions = "\n".join([f"{agent.name}: {agent.description}" for agent in agents])
+        definitions = "\n".join(
+            [f"{agent.name}: {agent.description}" for agent in agents]
+        )
 
         selection_function = KernelFunctionFromPrompt(
-                function_name="SpeakerSelector",
-                prompt_execution_settings=self.settings_executor,
-                prompt=fr"""
+            function_name="SpeakerSelector",
+            prompt_execution_settings=self.settings_executor,
+            prompt=rf"""
                     You are the next speaker selector.
 
                     - You MUST return ONLY agent name from the list of available agents below.
@@ -221,7 +244,8 @@ class DebateOrchestrator:
 # CHAT HISTORY
 
 {{{{$history}}}}
-""")
+""",
+        )
 
         # Could be lambda. Keeping as function for clarity
         def parse_selection_output(output):
@@ -231,11 +255,12 @@ class DebateOrchestrator:
             return default_agent.name
 
         return KernelFunctionSelectionStrategy(
-                    kernel=self.kernel,
-                    function=selection_function,
-                    result_parser=parse_selection_output,
-                    agent_variable_name="agents",
-                    history_variable_name="history")
+            kernel=self.kernel,
+            function=selection_function,
+            result_parser=parse_selection_output,
+            agent_variable_name="agents",
+            history_variable_name="history",
+        )
 
     # --------------------------------------------
     # Termination Strategy
@@ -262,15 +287,18 @@ class DebateOrchestrator:
             iteration: int = Field(default=0)
             kernel: ClassVar[Kernel] = self.kernel
 
-            termination_function: ClassVar[KernelFunctionFromPrompt] = KernelFunctionFromPrompt(
-                function_name="TerminationEvaluator",
-                prompt_execution_settings=self.settings_utility,
-                prompt="""
+            termination_function: ClassVar[KernelFunctionFromPrompt] = (
+                KernelFunctionFromPrompt(
+                    function_name="TerminationEvaluator",
+                    prompt_execution_settings=self.settings_utility,
+                    prompt="""
                     You are a data extraction assistant.
                     Check the provided evaluation and return the evalutation score.
                     It MUST be a single number only, for example - for 6/10 return 6.
                     {{$evaluation}}
-                """)
+                """,
+                )
+            )
 
             async def should_agent_terminate(self, agent, history):
                 """Terminate if the evaluation score > the passing score."""
@@ -281,7 +309,9 @@ class DebateOrchestrator:
                 arguments = KernelArguments()
                 arguments["evaluation"] = history[-1].content
 
-                res_val = await self.kernel.invoke(function=self.termination_function, arguments=arguments)
+                res_val = await self.kernel.invoke(
+                    function=self.termination_function, arguments=arguments
+                )
                 logger.info(f"Critic Evaluation: {res_val}")
 
                 try:
@@ -294,9 +324,6 @@ class DebateOrchestrator:
                 logger.info(f"Should terminate: {should_terminate}")
                 return should_terminate
 
-        return CompletionTerminationStrategy(agents=agents,
-                                             maximum_iterations=maximum_iterations)
-
-
-
-
+        return CompletionTerminationStrategy(
+            agents=agents, maximum_iterations=maximum_iterations
+        )

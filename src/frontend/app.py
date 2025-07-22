@@ -23,29 +23,28 @@ credential = DefaultAzureCredential()
 
 profiles = []
 
+
 @cl.set_chat_profiles
 async def chat_profile():
     logger.info("Loading chat profiles...")
     async with AzureAIAgent.create_client(credential=credential) as client:
         azure_ai_agents = [agent async for agent in client.agents.list_agents()]
         global profiles
-        profiles = [
-            AIFoundryAgentProfile(agent) for agent in azure_ai_agents
-        ]
+        profiles = [AIFoundryAgentProfile(agent) for agent in azure_ai_agents]
         profiles.append(
             DebateProfile(
-                endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
-                api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
-                executor_deployment_name = get_model_deployment("gpt-4.1").name,
-                utility_deployment_name = get_model_deployment("gpt-4o-mini").name,
+                endpoint=os.getenv("AI_FOUNDRY_ENDPOINT"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+                executor_deployment_name=get_model_deployment("gpt-4.1").name,
+                utility_deployment_name=get_model_deployment("gpt-4o-mini").name,
                 credential=credential,
-            ),            
+            ),
         )
         profiles.append(
             FoundryDebateProfile(
-                endpoint = os.getenv("AI_FOUNDRY_ENDPOINT"),
-                api_version = os.getenv("AZURE_OPENAI_API_VERSION"),
-                deployment_name = get_model_deployment("gpt-4.1").name,        
+                endpoint=os.getenv("AI_FOUNDRY_ENDPOINT"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+                deployment_name=get_model_deployment("gpt-4.1").name,
                 credential=credential,
                 agent_definitions=[
                     definition
@@ -61,7 +60,7 @@ async def chat_profile():
                 markdown_description=profile.markdown_description
                 if profile.description
                 else "No description available.",
-                default=profile.name == "Debate",
+                default=profile.name == "FoundryDebate",
             )
             for profile in profiles
         ]
@@ -85,11 +84,7 @@ async def on_chat_start():
     cl.user_session.set(
         "profile",
         next(
-            (
-                profile
-                for profile in profiles
-                if profile.name == profile_name
-            ),
+            (profile for profile in profiles if profile.name == profile_name),
             None,
         ),
     )

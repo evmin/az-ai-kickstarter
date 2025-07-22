@@ -1,6 +1,3 @@
-import asyncio
-import json
-
 import pytest
 from rich.console import Console
 from rich.markdown import Markdown
@@ -16,6 +13,7 @@ from azure.identity.aio import DefaultAzureCredential
 # Initialize environment and logging
 load_dotenv_from_azd()
 
+console = Console()
 
 @pytest.fixture()
 def orchestrator(mocker):
@@ -32,14 +30,13 @@ def orchestrator(mocker):
     )
 
 
-def test_blog_generation(orchestrator):
+async def test_blog_generation(orchestrator):
     conversation_messages = [
         {
             "role": "user",
             "content": "A blog about cookies",
         }
     ]
-    console = Console()
 
     async def collect_chunks() -> ChatMessageContent:
         last_step = None
@@ -56,7 +53,7 @@ def test_blog_generation(orchestrator):
                 raise ValueError(f"Unknown step type for {step}")
         return last_step["content"]
 
-    final_response = asyncio.run(collect_chunks())
+    final_response = await collect_chunks()
 
     assert final_response is not None
     assert "01/12/2031" in final_response

@@ -49,22 +49,27 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatPromptExecutionSettin
 from semantic_kernel.functions import KernelArguments
 from pydantic import BaseModel
 
+
 class AzureModel(BaseModel):
     format: str
     name: str
     version: str
 
+
 class AzureModelDeploymentSku(BaseModel):
     capacity: int
     name: str
+
 
 class AzureModelDeployment(BaseModel):
     model: AzureModel
     name: str
     sku: AzureModelDeploymentSku
     versionUpgradeOption: str
-    
+
+
 _deployments = None
+
 
 def load_dotenv_from_azd():
     """
@@ -82,18 +87,21 @@ def load_dotenv_from_azd():
         logging.info("AZD environment not found. Trying to load from .env file...")
         load_dotenv()
 
-    deployments_data = os.environ['AI_FOUNDRY_DEPLOYMENTS']
-    
+    deployments_data = os.environ["AI_FOUNDRY_DEPLOYMENTS"]
+
     try:
         # Try to decode as base64 first (for deployed environments)
-        deployments_data = base64.b64decode(deployments_data).decode('utf-8')
+        deployments_data = base64.b64decode(deployments_data).decode("utf-8")
     except binascii.Error:
         pass
     deployments_data = json.loads(deployments_data)
     _deployments = [AzureModelDeployment(**item) for item in deployments_data]
-    
+
     for deployment in _deployments:
-        logging.info(f"Loaded deployment: {deployment.name}, model:{deployment.model.name}, version:{deployment.model.version}, SKU:{deployment.sku.name}/{deployment.sku.capacity}")
+        logging.info(
+            f"Loaded deployment: {deployment.name}, model:{deployment.model.name}, version:{deployment.model.version}, SKU:{deployment.sku.name}/{deployment.sku.capacity}"
+        )
+
 
 def get_model_deployment(model_name: str):
     """
@@ -105,13 +113,24 @@ def get_model_deployment(model_name: str):
     Returns:
         AzureModelDeployment: The deployment object if found, otherwise None.
     """
-    assert _deployments is not None, "Deployments not loaded. Call load_dotenv_from_azd() first."
+    assert _deployments is not None, (
+        "Deployments not loaded. Call load_dotenv_from_azd() first."
+    )
     for deployment in _deployments:
         if deployment.model.name == model_name:
             return deployment
-    raise ValueError(f"Deployment for model '{model_name}' not found in {[dep.name for dep in _deployments]}.")
+    raise ValueError(
+        f"Deployment for model '{model_name}' not found in {[dep.name for dep in _deployments]}."
+    )
 
-telemetry_resource = Resource.create({ResourceAttributes.SERVICE_NAME: os.getenv("AZURE_RESOURCE_GROUP","ai-accelerator")})
+
+telemetry_resource = Resource.create(
+    {
+        ResourceAttributes.SERVICE_NAME: os.getenv(
+            "AZURE_RESOURCE_GROUP", "ai-accelerator"
+        )
+    }
+)
 
 # Set endpoint to the local Aspire Dashboard endpoint to enable local telemetry - DISABLED by default
 local_endpoint = None
@@ -123,12 +142,18 @@ def set_up_tracing():
     Sets up exporters for Azure Monitor and optional local telemetry.
     """
     if not os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-        logging.info("APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup.")
+        logging.info(
+            "APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup."
+        )
         return
 
     exporters = []
-    exporters.append(AzureMonitorTraceExporter.from_connection_string(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
-    if (local_endpoint):
+    exporters.append(
+        AzureMonitorTraceExporter.from_connection_string(
+            os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+        )
+    )
+    if local_endpoint:
         exporters.append(OTLPSpanExporter(endpoint=local_endpoint))
 
     tracer_provider = TracerProvider(resource=telemetry_resource)
@@ -143,15 +168,24 @@ def set_up_metrics():
     Configures views to filter metrics to only those starting with "semantic_kernel".
     """
     if not os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-        logging.info("APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup.")
+        logging.info(
+            "APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup."
+        )
         return
 
     exporters = []
-    if (local_endpoint):
+    if local_endpoint:
         exporters.append(OTLPMetricExporter(endpoint=local_endpoint))
-    exporters.append(AzureMonitorMetricExporter.from_connection_string(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
+    exporters.append(
+        AzureMonitorMetricExporter.from_connection_string(
+            os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+        )
+    )
 
-    metric_readers = [PeriodicExportingMetricReader(exporter, export_interval_millis=5000) for exporter in exporters]
+    metric_readers = [
+        PeriodicExportingMetricReader(exporter, export_interval_millis=5000)
+        for exporter in exporters
+    ]
 
     meter_provider = MeterProvider(
         metric_readers=metric_readers,
@@ -159,7 +193,8 @@ def set_up_metrics():
         views=[
             # Dropping all instrument names except for those starting with "semantic_kernel"
             View(instrument_name="*", aggregation=DropAggregation()),
-            View(instrument_name="semantic_kernel*"),],
+            View(instrument_name="semantic_kernel*"),
+        ],
     )
     set_meter_provider(meter_provider)
 
@@ -170,13 +205,19 @@ def set_up_logging():
     Adds filters to exclude specific namespace logs for cleaner output.
     """
     if not os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-        logging.info("APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup.")
+        logging.info(
+            "APPLICATIONINSIGHTS_CONNECTION_STRING is not set skipping observability setup."
+        )
         return
 
     exporters = []
-    exporters.append(AzureMonitorLogExporter(connection_string=os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")))
+    exporters.append(
+        AzureMonitorLogExporter(
+            connection_string=os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+        )
+    )
 
-    if (local_endpoint):
+    if local_endpoint:
         exporters.append(OTLPLogExporter(endpoint=local_endpoint))
     # exporters.append(ConsoleLogExporter())
 
@@ -196,33 +237,40 @@ def set_up_logging():
     class KernelFilter(logging.Filter):
         """
         A filter to exclude logs from specific semantic_kernel namespaces.
-        
+
         Prevents excessive logging from specified module namespaces to reduce noise.
         """
+
         # These are the namespaces that we want to exclude from logging for the purposes of this demo.
         namespaces_to_exclude: list[str] = [
             # "semantic_kernel.functions.kernel_plugin",
             "semantic_kernel.prompt_template.kernel_prompt_template",
             # "semantic_kernel.functions.kernel_function",
             "azure.monitor.opentelemetry.exporter.export._base",
-            "azure.core.pipeline.policies.http_logging_policy"
+            "azure.core.pipeline.policies.http_logging_policy",
         ]
 
         def filter(self, record):
-            return not any([record.name.startswith(namespace) for namespace in self.namespaces_to_exclude])
+            return not any(
+                [
+                    record.name.startswith(namespace)
+                    for namespace in self.namespaces_to_exclude
+                ]
+            )
 
     # FILTER - WHAT TO LOG - EXPLICITLY
     # handler.addFilter(logging.Filter("semantic_kernel"))
     handler.addFilter(KernelFilter())
 
+
 def setup_telemetry(name):
     # https://learn.microsoft.com/en-us/semantic-kernel/concepts/enterprise-readiness/observability/telemetry-advanced
-    #set_up_tracing()
-    #set_up_metrics()
-    #set_up_logging()
+    # set_up_tracing()
+    # set_up_metrics()
+    # set_up_logging()
 
     # See also https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/develop/trace-application
-    
+
     logging.info("Setting up logging with RichHandler...")
     logging.basicConfig(
         level=logging.DEBUG,
@@ -230,23 +278,33 @@ def setup_telemetry(name):
         datefmt="[%X]",
         handlers=[RichHandler(rich_tracebacks=True)],
     )
-    logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
-    logging.getLogger('azure.monitor.opentelemetry.exporter.export').setLevel(logging.WARNING)
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+        logging.WARNING
+    )
+    logging.getLogger("azure.monitor.opentelemetry.exporter.export").setLevel(
+        logging.WARNING
+    )
     logger = logging.getLogger(__name__)
 
     os.environ["AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED"] = "true"
     os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
 
     logger.info("Configuring Azure Monitor for OpenTelemetry...")
-    application_insights_connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+    application_insights_connection_string = os.environ[
+        "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    ]
     configure_azure_monitor(connection_string=application_insights_connection_string)
 
     logging.info("Instrumenting OpenAI SDK for Azure OpenAI...")
     OpenAIInstrumentor().instrument()
 
-    logger.info("Diagnostics: %s", os.getenv('SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS'))
+    logger.info(
+        "Diagnostics: %s",
+        os.getenv("SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS"),
+    )
     logger.info("Setting up OpenTelemetry tracer...")
     return trace.get_tracer(name)
+
 
 async def describe_action(kernel, settings, agent_name, message):
     """
@@ -274,14 +332,17 @@ async def describe_action(kernel, settings, agent_name, message):
         AGENT NAME: {agent_name}
         AGENT_MESSAGE: {message}
         """,
-        settings=settings
+        settings=settings,
     )
     return action_description
+
 
 # --------------------------------------------
 # UTILITY - CREATES an agent based on YAML definition
 # --------------------------------------------
-def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_effort=None):
+def create_agent_from_yaml(
+    kernel, service_id, definition_file_path, reasoning_effort=None
+):
     """
     Creates a ChatCompletionAgent from a YAML definition file.
 
@@ -298,14 +359,15 @@ def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_e
     temperature, and included_plugins.
     """
 
-    with open(definition_file_path, 'r', encoding='utf-8') as file:
+    with open(definition_file_path, "r", encoding="utf-8") as file:
         definition = yaml.safe_load(file)
 
     settings = AzureChatPromptExecutionSettings(
-            temperature=definition.get('temperature', 0.5),
-            function_choice_behavior=FunctionChoiceBehavior.Auto(
-                filters={"included_plugins": definition.get('included_plugins', [])}
-            ))
+        temperature=definition.get("temperature", 0.5),
+        function_choice_behavior=FunctionChoiceBehavior.Auto(
+            filters={"included_plugins": definition.get("included_plugins", [])}
+        ),
+    )
 
     # Resoning model specifics
     model_id = kernel.get_service(service_id=service_id).ai_model_id
@@ -317,9 +379,9 @@ def create_agent_from_yaml(kernel, service_id, definition_file_path, reasoning_e
         service=kernel.get_service(service_id=service_id),
         kernel=kernel,
         arguments=KernelArguments(settings=settings),
-        name=definition['name'],
-        description=definition['description'],
-        instructions=definition['instructions']
+        name=definition["name"],
+        description=definition["description"],
+        instructions=definition["instructions"],
     )
 
     return agent

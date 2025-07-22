@@ -16,6 +16,8 @@ from semantic_kernel.agents import (
 # Initialize environment and logging
 load_dotenv_from_azd()
 
+console = Console()
+
 
 @pytest.fixture()
 async def orchestrator(mocker):
@@ -45,30 +47,23 @@ async def test_blog_generation(orchestrator):
             "content": "A blog about cookies",
         }
     ]
-    console = Console()
 
-    async def collect_chunks() -> ChatMessageContent:
-        last_step = None
-        async with AzureAIAgent.create_client(credential=DefaultAzureCredential()) as project_client:
-            async for step in orchestrator.process_conversation(
-                project_client,
-                "test_user", 
-                conversation_messages
-            ):
-                last_step = step
-                console.rule()
-                if step["type"] == "status_update":
-                    console.print(f"Status Update: {step['description']}")
-                elif step["type"] == "final_response":
-                    console.print(f"Final Response: {step['content']}")
-                else:
-                    raise ValueError(f"Unknown step type for {step}")
-            return last_step["content"]
+    async def agent_response_callback(message: ChatMessageContent) -> None:
+        """Callback function to retrieve agent responses."""
+        print(f"**{message.name}**\n{message.content}")
 
-    final_response = await collect_chunks()
+    async with AzureAIAgent.create_client(
+        credential=DefaultAzureCredential()
+    ) as project_client:
+        final_message = await orchestrator.process_conversation(
+            project_client,
+            "test_user",
+            conversation_messages,
+            agent_response_callback=agent_response_callback,
+        )
 
-    assert final_response is not None
-    assert "01/12/2031" in final_response
+    assert final_message is not None
+    assert "01/12/2031" in final_message.content
 
     console.rule()
-    console.print(Panel(Markdown(final_response), title="Final Response"))
+    console.print(Panel(Markdown(final_message.content), title="Final Response"))

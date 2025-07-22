@@ -1,9 +1,9 @@
 import datetime
 import logging
-import sys
+
+from collections.abc import Awaitable, Callable
 
 from azure.ai.agents.models import Agent as AzureAIAgentModel
-from azure.ai.inference.aio import ChatCompletionsClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 from opentelemetry.trace import get_tracer
@@ -40,9 +40,15 @@ class ChatCompletionGroupChatManager(GroupChatManager):
     topic: str
     service: ChatCompletionClientBase
 
-    termination_prompt: str = "Check the **last** provided evaluation and terminate if the evaluated score is higher or equal to 8. "
+    termination_prompt: str = (
+        "You are mediator that guides a discussion on the topic of '{{$topic}}'. "
+        "Check the **last** provided evaluation and terminate if the evaluated score is higher or equal to 8. "
+    )
 
     selection_prompt: str = (
+        "You are mediator that guides a discussion on the topic of '{{$topic}}'. "
+        "Here are the names and descriptions of the participants: \n"
+        "{{$participants}}\n"
         "You are the next speaker selector. \n"
         "  - You MUST return ONLY agent name from the list of available agents below\n"
         "  - You MUST return the agent name and nothing else.\n"
@@ -78,7 +84,6 @@ class ChatCompletionGroupChatManager(GroupChatManager):
             prompt_template_config=prompt_template_config
         )
         return await prompt_template.render(Kernel(), arguments=arguments)
-
 
     async def should_request_user_input(
         self, chat_history: ChatHistory
@@ -186,10 +191,6 @@ class ChatCompletionGroupChatManager(GroupChatManager):
         raise RuntimeError(f"Unknown participant selected: {response.content}.")
 
 
-def agent_response_callback(message: ChatMessageContent) -> None:
-    """Callback function to retrieve agent responses."""
-    print(f"**{message.name}**\n{message.content}")
-
 # This pattern demonstrates how a debate between equally skilled models
 # can deliver an outcome that exceeds the capability of the model if
 # the task is handled as a single request-response in its entirety.
@@ -227,64 +228,49 @@ class FoundryDebateOrchestrator:
         self.deployment_name = deployment_name
         self.api_version = api_version
 
-    # --------------------------------------------
-    # Run the agent conversation
-    # --------------------------------------------
     async def process_conversation(
         self,
         project_client: AIProjectClient,
         user_id,
         conversation_messages: list[dict[str, str]],
-    ):
-        
+        agent_response_callback: Callable[[ChatMessageContent], Awaitable[None] | None]
+        | None = None,
+    ) -> ChatMessageContent:
         agents = []
         for agent in self.agent_definitions:
-            agents.append(AzureAIAgent(client=project_client, definition=agent, plugins=[TimePlugin()]))
+            agents.append(
+                AzureAIAgent(
+                    client=project_client, definition=agent, plugins=[TimePlugin()]
+                )
+            )
 
+        topic = conversation_messages[0]['content']
         orchestration = GroupChatOrchestration(
             members=agents,
             manager=ChatCompletionGroupChatManager(
-                topic=conversation_messages[0]["content"],
+                topic=topic,
                 agent_names=["Writer"],
-                service=AzureChatCompletion(deployment_name="gpt-4.1-2025-04-14",
-                                            base_url=f"{self.endpoint}/openai/deployments/gpt-4.1-2025-04-14",),
+                service=AzureChatCompletion(
+                    deployment_name="gpt-4.1-2025-04-14",
+                    base_url=f"{self.endpoint}/openai/deployments/gpt-4.1-2025-04-14",
+                ),
             ),
             agent_response_callback=agent_response_callback,
         )
 
-        # 2. Create a runtime and start it
         runtime = InProcessRuntime()
         runtime.start()
-
-        # 3. Invoke the orchestration with a task and the runtime
-        orchestration_result = await orchestration.invoke(
-            task="Please start the discussion.",
-            runtime=runtime,
-        )
 
         tracer = get_tracer(__name__)
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         session_id = f"{user_id}-{current_time}"
         with tracer.start_as_current_span(session_id):  # TODO: proper session name
-            value = await orchestration_result.get()
+            orchestration_result = await orchestration.invoke(
+                task=topic,
+                runtime=runtime,
+            )
+            value: ChatMessageContent = await orchestration_result.get()
             print(value)
 
-        # 5. Stop the runtime after the invocation is complete
         await runtime.stop_when_idle()
-
-        yield {
-            "type": "final_response",
-            "content": value.content,
-        }
-
-        # with tracer.start_as_current_span(session_id):
-        #     async for message in agent_group_chat.invoke():
-        #         logger.debug("Agent message: %s", message.to_dict())
-        #         description = await describe_action(
-        #             self.kernel, self.settings_utility, message.name, message.to_dict()
-        #         )
-        #         logger.debug("Action description: %s", description)
-        #         yield {"type": "status_update", "description": str(description)}
-
-        # chat_messages = agent_group_chat.get_chat_messages()
-        # await anext(chat_messages)  # ignore last message from CRITIC
+        return value
