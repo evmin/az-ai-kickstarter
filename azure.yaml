@@ -25,12 +25,12 @@ hooks:
   postdeploy:
     windows:
       shell: pwsh
-      run: .\infra\hooks\postdeploy.ps1
+      run: uv run --directory src/frontend -m utils.load_agents
       interactive: true
       continueOnError: false
     posix:
       shell: sh
-      run: ./infra/hooks/postdeploy.sh
+      run: uv run --directory src/frontend -m utils.load_agents
       interactive: true
       continueOnError: false
   postprovision:
