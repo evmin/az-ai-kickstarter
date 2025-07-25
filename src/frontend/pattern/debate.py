@@ -270,7 +270,7 @@ class DebateOrchestrator:
         Creates a strategy to determine when the debate should end.
 
         The strategy terminates the conversation when the Critic agent's evaluation
-        score exceeds a threshold (8.0) or when maximum iterations are reached.
+        score exceeds a threshold (9.0) or when maximum iterations are reached.
 
         Args:
             agents: List of agents that can trigger termination evaluation.
@@ -316,7 +316,7 @@ class DebateOrchestrator:
 
                 try:
                     # 9 is a relatively high score. Set to 8 for stable result.
-                    should_terminate = float(str(res_val)) >= 8.0
+                    should_terminate = float(str(res_val)) >= 9.0
                 except ValueError:
                     logger.error(f"Should terminate error: {ValueError}")
                     should_terminate = False

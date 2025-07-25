@@ -4,13 +4,13 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-from profile.debate import DebateOrchestrator
+from pattern.debate import DebateOrchestrator
 from utils import load_dotenv_from_azd, get_model_deployment
 import os
 from azure.identity.aio import DefaultAzureCredential
 
 
-# Initialize environment and logging
+# Load settings
 load_dotenv_from_azd()
 
 console = Console()

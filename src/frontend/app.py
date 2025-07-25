@@ -13,13 +13,13 @@ from semantic_kernel.agents import (
 )
 from utils import load_dotenv_from_azd, setup_telemetry, get_model_deployment
 
-from profile import AIFoundryAgentProfile, DebateProfile, FoundryDebateProfile
+from chainlit_chat_profile import AIFoundryAgentProfile, DebateProfile, FoundryDebateProfile
 
 load_dotenv_from_azd()
+credential = DefaultAzureCredential(exclude_managed_identity_credential=True)
 tracer = setup_telemetry(__name__)
 logger = logging.getLogger(__name__)
 
-credential = DefaultAzureCredential()
 
 profiles = []
 

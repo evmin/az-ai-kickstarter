@@ -9,7 +9,7 @@ from azure.identity.aio import DefaultAzureCredential
 from opentelemetry.trace import get_tracer
 from semantic_kernel.agents import GroupChatOrchestration
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
-from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
 from semantic_kernel.agents.orchestration.group_chat import (
     BooleanResult,
     GroupChatManager,
@@ -32,6 +32,8 @@ from semantic_kernel.functions import (
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.prompt_template import KernelPromptTemplate, PromptTemplateConfig
 
+from utils import get_model_deployment
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ class ChatCompletionGroupChatManager(GroupChatManager):
 
     termination_prompt: str = (
         "You are mediator that guides a discussion on the topic of '{{$topic}}'. "
-        "Check the **last** provided evaluation and terminate if the evaluated score is higher or equal to 8. "
+        "Check the **last** provided evaluation and terminate if the evaluated score is higher or equal to 9. "
     )
 
     selection_prompt: str = (
@@ -125,7 +127,11 @@ class ChatCompletionGroupChatManager(GroupChatManager):
 
         response = await self.service.get_chat_message_content(
             chat_history,
-            settings=PromptExecutionSettings(response_format=BooleanResult),
+            settings=PromptExecutionSettings(
+                response_format=BooleanResult,
+                temperature=0.0,
+            ) 
+                                            
         )
 
         termination_with_reason = BooleanResult.model_validate_json(response.content)
@@ -172,7 +178,10 @@ class ChatCompletionGroupChatManager(GroupChatManager):
 
         response = await self.service.get_chat_message_content(
             chat_history,
-            settings=PromptExecutionSettings(response_format=StringResult),
+            settings=PromptExecutionSettings(
+                response_format=StringResult,
+                temperature=0.0,
+            ),
         )
 
         participant_name_with_reason = StringResult.model_validate_json(
@@ -213,13 +222,6 @@ class FoundryDebateOrchestrator:
         agent_definitions: list[AzureAIAgentModel],
         credential: DefaultAzureCredential,
     ):
-        """
-        Creates the DebateOrchestrator with necessary services and kernel configurations.
-
-        Sets up Azure OpenAI connections for both executor and utility models,
-        configures Semantic Kernel, and prepares execution settings for the agents.
-        """
-
         logger.info("Semantic Kernel Foundry debate orchestrator initialization...")
 
         self.endpoint = endpoint
@@ -227,6 +229,8 @@ class FoundryDebateOrchestrator:
         self.credential = credential
         self.deployment_name = deployment_name
         self.api_version = api_version
+
+        self.kernel = Kernel()
 
     async def process_conversation(
         self,
@@ -237,22 +241,28 @@ class FoundryDebateOrchestrator:
         | None = None,
     ) -> ChatMessageContent:
         agents = []
-        for agent in self.agent_definitions:
+
+        for agent_definition in self.agent_definitions:
             agents.append(
+                # Wrapping AI Foundry Agents in Semantic Kernel's AzureAIAgent
                 AzureAIAgent(
-                    client=project_client, definition=agent, plugins=[TimePlugin()]
+                    client=project_client, definition=agent_definition, plugins=[TimePlugin()]
                 )
             )
 
         topic = conversation_messages[0]['content']
+        deployment_name = get_model_deployment("gpt-4.1").name
+
         orchestration = GroupChatOrchestration(
             members=agents,
             manager=ChatCompletionGroupChatManager(
                 topic=topic,
-                agent_names=["Writer"],
-                service=AzureChatCompletion(
-                    deployment_name="gpt-4.1-2025-04-14",
-                    base_url=f"{self.endpoint}/openai/deployments/gpt-4.1-2025-04-14",
+                agent_names=["Writer"],    
+
+                service=AzureAIInferenceChatCompletion(
+                    ai_model_id=deployment_name,
+                    credential=self.credential,
+                    endpoint=self.endpoint,
                 ),
             ),
             agent_response_callback=agent_response_callback,

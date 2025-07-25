@@ -1,6 +1,7 @@
 name: "Writer"
+model: gpt-4.1-2025-04-14 # model deployment name in AI Foundry
 temperature: 0.7
-included_plugins: # This is ignored for now.
+included_plugins: # This is ignored for AI Foundry agents
     - "time"
 description: Agent that writes a blog post based on the user request
 instructions: |

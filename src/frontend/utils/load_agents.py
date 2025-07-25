@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 import yaml
-from utils import load_dotenv_from_azd
+from . import load_dotenv_from_azd
 from azure.identity.aio import DefaultAzureCredential
 from rich.console import Console
 from semantic_kernel.agents import (
@@ -13,7 +13,6 @@ from semantic_kernel.agents import (
 load_dotenv_from_azd()
 console = Console()
 
-
 async def main() -> None:
     """Main function to load agents from YAML files and create/update them in Azure AI."""
     async with (
@@ -22,7 +21,7 @@ async def main() -> None:
     ):
         agents = {agent.name: agent async for agent in client.agents.list_agents()}
 
-        if os.environ.get("RELOAD") is not None:
+        if os.environ.get("DELETE_ALL") is not None:
             for agent in agents.values():
                 console.print(
                     f"Deleting agent: [bold cyan]{agent.name}[/] - [blue]{agent.description}[/]..."

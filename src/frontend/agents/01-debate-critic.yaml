@@ -1,4 +1,6 @@
 name: Critic
+model: gpt-4.1-2025-04-14 # model deployment name in AI Foundry
+temperature: 0.0
 description: The agent that summarises a blogpost proposal and provides feedback
 instructions: |
   You are a Critic Agent. You read the writers blogpost and provide concise and constructive feedback.

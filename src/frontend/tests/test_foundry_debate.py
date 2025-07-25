@@ -4,7 +4,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-from profile.foundry_debate import FoundryDebateOrchestrator
+from pattern.foundry_debate import FoundryDebateOrchestrator
 from utils import load_dotenv_from_azd, get_model_deployment
 import os
 from azure.identity.aio import DefaultAzureCredential
@@ -13,11 +13,10 @@ from semantic_kernel.agents import (
     AzureAIAgent,
 )
 
-# Initialize environment and logging
+# Load settings
 load_dotenv_from_azd()
 
 console = Console()
-
 
 @pytest.fixture()
 async def orchestrator(mocker):
@@ -64,6 +63,7 @@ async def test_blog_generation(orchestrator):
 
     assert final_message is not None
     assert "01/12/2031" in final_message.content
+    assert "cookies" in final_message.content.lower()
 
     console.rule()
     console.print(Panel(Markdown(final_message.content), title="Final Response"))
