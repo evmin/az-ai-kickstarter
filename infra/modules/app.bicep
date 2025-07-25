@@ -117,9 +117,9 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.12.1' = {
   name: '${deployment().name}-keyVault'
   scope: resourceGroup()
   params: {
+    name: keyVaultName
     location: location
     tags: tags
-    name: keyVaultName
     enableRbacAuthorization: true
     enablePurgeProtection: false // Set to true to if you deploy in production and want to protect against accidental deletion
     roleAssignments: [

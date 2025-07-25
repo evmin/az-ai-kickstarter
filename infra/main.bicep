@@ -236,49 +236,6 @@ var _azureAiSearchEndpoint = 'https://${_azureAiSearchName}.search.windows.net'
 /*                                  RESOURCES                                 */
 /* -------------------------------------------------------------------------- */
 
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' = {
-  name: '${deployment().name}-containerRegistry'
-  params: {
-    name: _containerRegistryName
-    location: location
-    tags: tags
-    acrSku: 'Standard'
-    acrAdminUserEnabled: true
-    roleAssignments: [
-      {
-        roleDefinitionIdOrName: 'AcrPull'
-        principalId: azurePrincipalId
-      }
-    ]
-  }
-}
-
-module keyVault 'br/public:avm/res/key-vault/vault:0.12.1' = {
-  name: '${deployment().name}-keyVault'
-  scope: resourceGroup()
-  params: {
-    location: location
-    tags: tags
-    name: _keyVaultName
-    enableRbacAuthorization: true
-    enablePurgeProtection: false // Set to true to if you deploy in production and want to protect against accidental deletion
-    roleAssignments: [
-      {
-        roleDefinitionIdOrName: 'Key Vault Administrator'
-        principalId: azurePrincipalId
-      }
-    ]
-    secrets: useAuthentication && authClientSecret != ''
-      ? [
-          {
-            name: authClientSecretName
-            value: authClientSecret
-          }
-        ]
-      : []
-  }
-}
-
 //------------------------------ AI Foundry  ------------------------------ */
 
 module aiFoundryAccount 'br/public:avm/res/cognitive-services/account:0.11.0' = if (!useExistingAiFoundry) {
@@ -438,6 +395,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.19.0' = {
         }
       ]
       roleAssignments: [
+        // TODO: review and make work for AI Foundry Evaluations
         {
           roleDefinitionIdOrName: 'Storage Blob Data Contributor'
           principalId: azurePrincipalId
@@ -685,3 +643,4 @@ output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS bool = true
 
 @description('Semantic Kernel Diagnostics: if set, content of the messages is traced. Set to false in production')
 output SEMANTICKERNEL_EXPERIMENTAL_GENAI_ENABLE_OTEL_DIAGNOSTICS_SENSITIVE bool = true
+
