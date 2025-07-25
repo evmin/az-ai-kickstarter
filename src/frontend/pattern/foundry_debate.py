@@ -9,7 +9,7 @@ from azure.identity.aio import DefaultAzureCredential
 from opentelemetry.trace import get_tracer
 from semantic_kernel.agents import GroupChatOrchestration
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
-from semantic_kernel.connectors.ai.azure_ai_inference import AzureAIInferenceChatCompletion
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.agents.orchestration.group_chat import (
     BooleanResult,
     GroupChatManager,
@@ -230,8 +230,6 @@ class FoundryDebateOrchestrator:
         self.deployment_name = deployment_name
         self.api_version = api_version
 
-        self.kernel = Kernel()
-
     async def process_conversation(
         self,
         project_client: AIProjectClient,
@@ -241,7 +239,6 @@ class FoundryDebateOrchestrator:
         | None = None,
     ) -> ChatMessageContent:
         agents = []
-
         for agent_definition in self.agent_definitions:
             agents.append(
                 # Wrapping AI Foundry Agents in Semantic Kernel's AzureAIAgent
@@ -259,10 +256,9 @@ class FoundryDebateOrchestrator:
                 topic=topic,
                 agent_names=["Writer"],    
 
-                service=AzureAIInferenceChatCompletion(
-                    ai_model_id=deployment_name,
-                    credential=self.credential,
-                    endpoint=self.endpoint,
+                service=AzureChatCompletion(
+                    deployment_name=deployment_name,
+                    base_url=f"{self.endpoint}/openai/deployments/{deployment_name}",                    
                 ),
             ),
             agent_response_callback=agent_response_callback,
