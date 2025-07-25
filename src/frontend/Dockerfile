@@ -30,12 +30,13 @@ RUN uv sync \
     --no-editable \
     --all-packages
 
-COPY app.py /app/
-COPY utils/ /app/
-COPY chainlit_chat_profile/ /app/
-COPY agents/ /app/
 COPY .chainlit/config.toml /app/.chainlit/
+COPY agents/ /app/agents/
+COPY app.py /app/
+COPY chainlit_chat_profile/ /app/chainlit_chat_profile/
 COPY chainlit.md /app/
+COPY pattern/ /app/pattern/
+COPY utils/ /app/utils/
 
 ###############
 # Final image #

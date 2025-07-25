@@ -16,7 +16,7 @@ from utils import load_dotenv_from_azd, setup_telemetry, get_model_deployment
 from chainlit_chat_profile import AIFoundryAgentProfile, DebateProfile, FoundryDebateProfile
 
 load_dotenv_from_azd()
-credential = DefaultAzureCredential(exclude_managed_identity_credential=True)
+credential = DefaultAzureCredential()
 tracer = setup_telemetry(__name__)
 logger = logging.getLogger(__name__)
 

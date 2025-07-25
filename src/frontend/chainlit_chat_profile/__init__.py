@@ -136,8 +136,8 @@ class FoundryDebateProfile:
         async def call_back(message: ChatMessageContent) -> None:
             # await response.stream_token(f"**{message.name}**\n{message.content}")
             async with cl.Step(name=f"Agent {message.name}") as step:
-                step.output = f"{message.content}\\n{message.metadata}"
-
+                step.output = message.content
+                                 
         # See https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-types/azure-ai-agent
         async with AzureAIAgent.create_client(
             credential=self.credentials
